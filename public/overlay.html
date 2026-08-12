@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>مصدر البث — رسامين غنام</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>%F0%9F%8E%A8</text></svg>" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { background: transparent; font-family: "Tajawal", system-ui, sans-serif; color: #fff; overflow: hidden; }
+    #wrap { padding: 20px; }
+    .card {
+      background: rgba(26, 20, 35, 0.88); border: 2px solid #f6ae2d; border-radius: 20px;
+      padding: 18px 24px; max-width: 640px; box-shadow: 0 10px 30px rgba(0,0,0,.5);
+    }
+    .phase-tag { font-size: 13px; color: #f6ae2d; font-weight: 700; margin-bottom: 6px; }
+    .title { font-size: 24px; font-weight: 800; margin-bottom: 10px; }
+    .acting-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .acting-chip { background: rgba(255,255,255,.1); border-radius: 30px; padding: 6px 14px; font-size: 15px; }
+    .book-owner { font-size: 16px; color: #b7a9cf; margin-bottom: 10px; }
+    .entry-text { font-size: 26px; font-weight: 800; text-align: center; padding: 10px; }
+    .entry-canvas { background: #fff; border-radius: 12px; width: 100%; max-width: 500px; display: block; margin: 0 auto; }
+    .locked-box { text-align: center; padding: 30px; font-size: 20px; color: #f6ae2d; }
+    .hidden-box { text-align: center; padding: 30px; font-size: 18px; color: #ef476f; }
+    .empty { opacity: 0; }
+    .floats { position: fixed; inset: 0; pointer-events: none; }
+    .fe { position: absolute; font-size: 36px; animation: up 2s ease-out forwards; }
+    @keyframes up { to { transform: translateY(-200px) scale(1.4); opacity: 0; } }
+  </style>
+</head>
+<body>
+  <div id="wrap"></div>
+  <div class="floats" id="floats"></div>
+  <script src="js/draw.js"></script>
+  <script src="js/overlay.js"></script>
+</body>
+</html>

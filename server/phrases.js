@@ -1,4 +1,6 @@
-// بنك العبارات للعبة "رسامين غنام" — مصنّف حسب الفئة، قابل للتوسعة
+// بنك العبارات للعبة "رسامين غنام" — مصنّف حسب الفئة، قابل للتوسعة من لوحة التحكم
+import { get as getStore } from './store.js';
+
 export const PHRASE_BANK = {
   عام: [
     'قطة تشرب قهوة الصباح',
@@ -52,9 +54,28 @@ export function allCategories() {
   return Object.keys(PHRASE_BANK);
 }
 
+function effectiveList(category) {
+  const base = PHRASE_BANK[category] || [];
+  const store = getStore();
+  const added = (store.phraseOverrides.added || []).filter((p) => p.category === category).map((p) => p.phrase);
+  const removed = new Set(store.phraseOverrides.removed || []);
+  return [...base, ...added].filter((p) => !removed.has(p));
+}
+
 export function randomPhrase(category) {
   const cats = category && PHRASE_BANK[category] ? [category] : allCategories();
   const cat = cats[Math.floor(Math.random() * cats.length)];
-  const list = PHRASE_BANK[cat];
+  const list = effectiveList(cat);
+  if (!list.length) return 'ارسم أي فكرة تخطر ببالك';
   return list[Math.floor(Math.random() * list.length)];
+}
+
+// عبارة يومية ثابتة لكل اللاعبين حول العالم (نفس اليوم = نفس العبارة)
+export function dailyPhrase(date = new Date()) {
+  const key = date.toISOString().slice(0, 10);
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  const list = effectiveList('عام');
+  if (!list.length) return 'تحدي اليوم';
+  return list[hash % list.length];
 }

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#1a1423" />
   <title>رسامين غنام</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>%F0%9F%8E%A8</text></svg>" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -32,6 +33,11 @@
             <button id="btn-join" class="btn btn-ghost">انضمام</button>
           </div>
         </div>
+        <div class="home-links">
+          <button id="btn-daily" class="btn btn-ghost btn-sm">🏆 التحدي اليومي</button>
+          <a href="/gallery.html" class="btn btn-ghost btn-sm">🖼️ المعرض العام</a>
+          <button id="btn-account" class="btn btn-ghost btn-sm">👤 حسابي</button>
+        </div>
       </div>
 
       <!-- إعدادات الإنشاء -->
@@ -40,10 +46,13 @@
           <h2>إعدادات الغرفة</h2>
           <label class="field">
             <span>نمط اللعب</span>
-            <select id="set-mode">
-              <option value="normal">العادي (تلفون غنام)</option>
-              <option value="speed">السريع (وقت متناقص)</option>
-              <option value="secret">السري (لا نتائج حتى النهاية)</option>
+            <select id="set-mode"></select>
+          </label>
+          <p class="mode-desc" id="mode-desc"></p>
+          <label class="field">
+            <span>فئة العبارات</span>
+            <select id="set-category">
+              <option value="">كل الفئات</option>
             </select>
           </label>
           <div class="field-row">
@@ -56,19 +65,61 @@
               <input id="set-max" type="number" min="3" max="30" value="12" />
             </label>
           </div>
-          <label class="field toggle">
-            <input id="set-public" type="checkbox" /> <span>غرفة عامة (انضمام عشوائي)</span>
+          <label class="field">
+            <span>من يرى ماذا أثناء اللعب</span>
+            <select id="set-visibility">
+              <option value="previous">الإدخال السابق فقط</option>
+              <option value="full_chain">كل السلسلة حتى الآن</option>
+            </select>
           </label>
-          <label class="field toggle">
-            <input id="set-family" type="checkbox" /> <span>الوضع العائلي (فلترة مشددة)</span>
-          </label>
-          <label class="field toggle">
-            <input id="set-latejoin" type="checkbox" checked /> <span>السماح بالدخول المتأخر</span>
-          </label>
+          <label class="field toggle"><input id="set-public" type="checkbox" /> <span>غرفة عامة (انضمام عشوائي)</span></label>
+          <label class="field toggle"><input id="set-family" type="checkbox" /> <span>الوضع العائلي (فلترة مشددة)</span></label>
+          <label class="field toggle"><input id="set-latejoin" type="checkbox" checked /> <span>السماح بالدخول المتأخر</span></label>
+          <label class="field toggle"><input id="set-teams" type="checkbox" /> <span>وضع الفرق (فريقان متنافسان)</span></label>
+          <label class="field toggle"><input id="set-daily" type="checkbox" /> <span>تحدي اليوم (عبارة ثابتة للجميع)</span></label>
+          <label class="field toggle"><input id="set-audience" type="checkbox" checked /> <span>تفعيل تصويت الجمهور</span></label>
+          <details class="schedule-details">
+            <summary>جدولة الغرفة لموعد لاحق (اختياري)</summary>
+            <label class="field">
+              <span>وقت البدء التلقائي</span>
+              <input id="set-schedule" type="datetime-local" />
+            </label>
+          </details>
           <div class="modal-actions">
             <button id="btn-create-confirm" class="btn btn-primary">إنشاء</button>
             <button class="btn btn-ghost" data-close-modal>إلغاء</button>
           </div>
+        </div>
+      </div>
+
+      <!-- نافذة التحدي اليومي -->
+      <div id="daily-modal" class="modal hidden">
+        <div class="modal-box">
+          <h2>🏆 تحدي اليوم</h2>
+          <p class="share-hint">عبارة اليوم الثابتة للجميع حول العالم:</p>
+          <div class="prompt-box" id="daily-phrase-box" style="margin:14px 0"></div>
+          <h3 style="margin-bottom:10px">لوحة الصدارة اليوم</h3>
+          <ol id="daily-leaderboard" class="leaderboard-list"></ol>
+          <div class="modal-actions"><button class="btn btn-ghost" data-close-modal>إغلاق</button></div>
+        </div>
+      </div>
+
+      <!-- نافذة الحساب -->
+      <div id="account-modal" class="modal hidden">
+        <div class="modal-box">
+          <h2>👤 حسابي</h2>
+          <div id="account-guest">
+            <p class="share-hint">لعب كضيف الآن. احفظ تقدمك لحفظ نقاطك وشاراتك بين الجلسات.</p>
+            <button id="btn-save-account" class="btn btn-primary btn-lg">💾 حفظ تقدمي</button>
+          </div>
+          <div id="account-info" class="hidden">
+            <div class="acc-row"><span>الاسم</span><b id="acc-name"></b></div>
+            <div class="acc-row"><span>مجموع النقاط</span><b id="acc-score"></b></div>
+            <div class="acc-row"><span>عدد الألعاب</span><b id="acc-games"></b></div>
+            <div class="acc-row"><span>الشارات</span></div>
+            <div id="acc-badges" class="badges-row"></div>
+          </div>
+          <div class="modal-actions"><button class="btn btn-ghost" data-close-modal>إغلاق</button></div>
         </div>
       </div>
     </section>
@@ -80,8 +131,14 @@
           <span class="room-label">رمز الغرفة</span>
           <span id="lobby-code" class="room-code" title="اضغط للنسخ"></span>
         </div>
-        <button id="btn-share" class="btn btn-icon" title="مشاركة ورمز QR">🔗</button>
+        <div class="topbar-actions">
+          <button id="btn-streamer" class="btn btn-icon" title="وضع الستريمر">🎥</button>
+          <button id="btn-share" class="btn btn-icon" title="مشاركة ورمز QR">🔗</button>
+        </div>
       </header>
+
+      <div id="announcement-banner" class="announcement hidden"></div>
+      <div id="schedule-banner" class="announcement hidden"></div>
 
       <div class="lobby-body">
         <div class="players-panel">
@@ -116,6 +173,30 @@
           </div>
         </div>
       </div>
+
+      <!-- لوحة الستريمر -->
+      <div id="streamer-modal" class="modal hidden">
+        <div class="modal-box modal-wide">
+          <h2>🎥 وضع الستريمر</h2>
+          <div class="streamer-links">
+            <div class="streamer-link-card">
+              <h4>🖥️ مصدر البث (OBS Browser Source)</h4>
+              <div class="share-link-row"><input id="overlay-link" type="text" readonly /><button class="btn btn-ghost btn-sm copy-btn" data-copy="overlay-link">نسخ</button></div>
+            </div>
+            <div class="streamer-link-card">
+              <h4>👥 رابط تصويت الجمهور</h4>
+              <div class="share-link-row"><input id="audience-link" type="text" readonly /><button class="btn btn-ghost btn-sm copy-btn" data-copy="audience-link">نسخ</button></div>
+              <div class="qr-wrap qr-small"><img id="audience-qr" alt="QR الجمهور" /></div>
+            </div>
+          </div>
+          <label class="field toggle"><input id="set-safemode" type="checkbox" /> <span>الوضع الآمن (إخفاء الكشف حتى الموافقة)</span></label>
+          <button id="btn-approve-reveal" class="btn btn-secondary hidden">✅ اعتماد عرض هذه الخطوة على البث</button>
+          <div id="audience-tally-box" class="audience-tally hidden"></div>
+          <h3 style="margin:14px 0 8px">إدارة اللاعبين</h3>
+          <ul id="streamer-players" class="players-list"></ul>
+          <div class="modal-actions"><button class="btn btn-ghost" data-close-modal>إغلاق</button></div>
+        </div>
+      </div>
     </section>
 
     <!-- ===== شاشة الكتابة ===== -->
@@ -124,8 +205,10 @@
         <div class="round-pill" id="write-round"></div>
         <div class="timer" id="write-timer">--</div>
       </div>
+      <div id="write-chain" class="chain-strip hidden"></div>
       <div class="write-body">
         <div id="write-prompt" class="prompt-box"></div>
+        <div id="write-banned" class="banned-box hidden">🚫 أنت محظور مؤقتًا من المشاركة هذه الجولة</div>
         <div class="write-input-wrap">
           <input id="write-text" type="text" maxlength="140" placeholder="اكتب هنا.." autocomplete="off" />
           <button id="btn-suggest" class="btn btn-ghost btn-sm" title="اقترح عبارة">🎲</button>
@@ -142,11 +225,21 @@
         <div class="timer" id="draw-timer">--</div>
       </div>
       <div id="draw-prompt" class="prompt-box prompt-draw"></div>
+      <div id="draw-banned" class="banned-box hidden">🚫 أنت محظور مؤقتًا من المشاركة هذه الجولة</div>
       <div class="draw-stage">
         <canvas id="canvas" width="800" height="600"></canvas>
       </div>
       <div class="tools" id="tools"></div>
       <button id="btn-submit-draw" class="btn btn-primary btn-lg">إرسال الرسمة ✅</button>
+    </section>
+
+    <!-- ===== شاشة الانتظار (متفرّج على جولة الرسم الجماعي) ===== -->
+    <section id="screen-spectate" class="screen">
+      <div class="waiting-box">
+        <div class="spinner"></div>
+        <h2>هذه ليست جولتك 👀</h2>
+        <p>لاعب آخر يلعب دوره الآن — دورك قادم قريبًا</p>
+      </div>
     </section>
 
     <!-- ===== شاشة الانتظار بين الجولات ===== -->
@@ -170,6 +263,7 @@
           <button id="btn-book-next" class="btn btn-ghost btn-sm">التالي ◀</button>
         </div>
       </div>
+      <div id="team-scores-bar" class="team-scores hidden"></div>
       <div id="reveal-stage" class="reveal-stage"></div>
       <div class="reveal-controls">
         <button id="btn-reveal-step" class="btn btn-primary btn-lg">اكشف التالي ✨</button>
@@ -180,8 +274,22 @@
           <button class="react" data-emoji="👏">👏</button>
           <button class="react" data-emoji="❤️">❤️</button>
         </div>
+        <button id="btn-publish-gallery" class="btn btn-ghost hidden">📤 انشر هذا الكتاب في المعرض العام</button>
       </div>
+      <button id="btn-show-results" class="btn btn-secondary hidden">🏆 النتائج النهائية</button>
       <button id="btn-play-again" class="btn btn-secondary hidden">🔄 العودة للغرفة</button>
+    </section>
+
+    <!-- ===== شاشة النتائج النهائية ===== -->
+    <section id="screen-results" class="screen">
+      <div class="results-box">
+        <h2>🏆 النتائج النهائية</h2>
+        <div id="awards-grid" class="awards-grid"></div>
+        <h3 style="margin:18px 0 10px">لوحة النقاط</h3>
+        <ol id="results-scores" class="leaderboard-list"></ol>
+        <div id="results-teams" class="team-scores hidden"></div>
+        <button id="btn-results-back" class="btn btn-primary btn-lg">🔄 العودة للغرفة</button>
+      </div>
     </section>
 
     <!-- طبقة التنبيهات -->

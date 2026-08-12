@@ -4,3 +4,5 @@ npm-debug.log*
 .DS_Store
 _test*.mjs
 _shot*.mjs
+_final_test.mjs
+data/store.json
