@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#1a1423" />
+  <title>انضمام — رسامين غنام</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <section class="screen active" style="justify-content:center">
+    <div class="brand" style="margin:4vh 0 3vh">
+      <div class="brand-logo" aria-hidden="true">🎨</div>
+      <h1 class="brand-title" style="font-size:36px">رسامين غنام</h1>
+    </div>
+
+    <div class="home-actions">
+      <div class="card">
+        <div id="join-status" class="lobby-hint" style="margin-bottom:14px">جارِ التحقق من الغرفة..</div>
+        <div id="join-form" class="hidden">
+          <label class="field">
+            <span>اسمك المستعار</span>
+            <input id="j-name" type="text" maxlength="20" placeholder="اكتب اسمك.." autocomplete="off" />
+          </label>
+          <div class="avatar-pick" id="j-avatars"></div>
+          <button id="j-btn" class="btn btn-primary btn-lg">🎮 انضمام</button>
+        </div>
+        <div id="join-error" class="hidden">
+          <p class="lobby-hint" id="join-error-text"></p>
+          <a href="/" class="btn btn-ghost btn-lg">العودة للرئيسية</a>
+        </div>
+      </div>
+    </div>
+  </section>
+  <div id="toast" class="toast hidden"></div>
+  <script src="js/join.js"></script>
+</body>
+</html>
