@@ -89,6 +89,35 @@ npm start
 
 ---
 
+## 🌐 النشر (Deploy)
+
+اللعبة تحتاج **عملية Node.js دائمة تدعم WebSocket** — لا يمكن تشغيلها على استضافة ساكنة بحتة مثل
+Netlify أو Vercel Static (تلك المنصات تشغّل دوال مؤقتة تختفي بعد كل طلب، وما تقدر تفتح اتصال
+WebSocket مستمر ولا تحتفظ بحالة الغرف بالذاكرة).
+
+**الخيار الأول (الأبسط): كل شيء على منصة واحدة تدعم Node**
+مثل Render أو Railway أو Fly.io أو VPS خاص. يوجد ملف `render.yaml` جاهز للنشر المباشر على Render:
+```bash
+npm install && npm start   # أو استخدم زر "Deploy to Render" مع render.yaml
+```
+اضبط `ADMIN_TOKEN` كمتغيّر بيئة، واترك `public/js/config.js` كما هو (`GHANNAM_API_ORIGIN = ''`).
+
+**الخيار الثاني: فصل الواجهة عن الخادم** (لو تحب تستخدم Netlify لجزء منها)
+1. انشر مجلد `server/` (والملفات المرافقة) على Render/Railway/Fly — هذا يشغّل الخادم والـ WebSocket.
+2. بعد الحصول على رابط الخادم (مثل `https://ghannam-painters.onrender.com`)، عدّل
+   `public/js/config.js`:
+   ```js
+   window.GHANNAM_API_ORIGIN = 'https://ghannam-painters.onrender.com';
+   ```
+3. انشر مجلد `public/` فقط على Netlify (ملف `netlify.toml` جاهز ويحدد `publish = "public"`).
+4. الخادم مفعّل عليه CORS تلقائيًا فيقبل طلبات REST من نطاق Netlify، والـ WebSocket يعمل مباشرة
+   بين المتصفح والخادم بغضّ النظر عن النطاق.
+
+بهذا الشكل تقدر تستخدم Netlify لاستضافة الواجهة فعليًا، لكن محرّك اللعبة نفسه (الغرف، الرسم،
+الستريمر) يبقى محتاج استضافة تدعم Node.js دائمة — هذا قيد من طبيعة اللعبة الحيّة، مو قابل للتفادي.
+
+---
+
 ## 🏗️ البنية التقنية
 
 ```

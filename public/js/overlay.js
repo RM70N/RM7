@@ -3,8 +3,7 @@ const code = new URLSearchParams(location.search).get('room');
 const wrap = document.getElementById('wrap');
 
 function connect() {
-  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  const ws = new WebSocket(`${proto}://${location.host}/ws`);
+  const ws = new WebSocket(window.ghannamWsUrl());
   ws.onopen = () => ws.send(JSON.stringify({ type: 'joinOverlay', code }));
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);

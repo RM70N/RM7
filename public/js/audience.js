@@ -8,8 +8,7 @@ let myVote = null;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.className = 'toast'; setTimeout(() => t.classList.add('hidden'), 2200); }
 
 function connect() {
-  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws = new WebSocket(window.ghannamWsUrl());
   ws.onopen = () => {
     const name = $('#aud-name').value.trim() || 'مشاهد';
     ws.send(JSON.stringify({ type: 'joinAudience', code, name }));

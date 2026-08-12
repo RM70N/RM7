@@ -35,8 +35,7 @@ function toast(msg, kind = '') {
 // ===== WebSocket =====
 function connect() {
   return new Promise((resolve) => {
-    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    const ws = new WebSocket(`${proto}://${location.host}/ws`);
+    const ws = new WebSocket(window.ghannamWsUrl());
     state.ws = ws;
     ws.onopen = () => resolve(ws);
     ws.onmessage = (e) => handleServer(JSON.parse(e.data));
@@ -176,7 +175,7 @@ async function autoJoin(code, name, avatar) {
 
 async function loadModes() {
   try {
-    const r = await fetch('/api/modes'); const { modes } = await r.json();
+    const r = await fetch(window.ghannamApi('/api/modes')); const { modes } = await r.json();
     state.modes = modes;
     const sel = $('#set-mode');
     sel.innerHTML = modes.map((m) => `<option value="${m.id}">${escapeHtml(m.name)}</option>`).join('');
@@ -186,7 +185,7 @@ async function loadModes() {
 }
 async function loadCategories() {
   try {
-    const r = await fetch('/api/categories'); const { categories } = await r.json();
+    const r = await fetch(window.ghannamApi('/api/categories')); const { categories } = await r.json();
     const sel = $('#set-category');
     categories.forEach((c) => { const o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o); });
   } catch {}
@@ -235,9 +234,9 @@ async function doJoinFromHome() {
 async function openDaily() {
   $('#daily-modal').classList.remove('hidden');
   try {
-    const r1 = await fetch('/api/daily/phrase'); const { phrase } = await r1.json();
+    const r1 = await fetch(window.ghannamApi('/api/daily/phrase')); const { phrase } = await r1.json();
     $('#daily-phrase-box').textContent = phrase;
-    const r2 = await fetch('/api/daily/leaderboard'); const { leaderboard } = await r2.json();
+    const r2 = await fetch(window.ghannamApi('/api/daily/leaderboard')); const { leaderboard } = await r2.json();
     const list = $('#daily-leaderboard');
     list.innerHTML = leaderboard.length
       ? leaderboard.slice(0, 10).map((e) => `<li>${escapeHtml(e.avatar || '🎨')} <b>${escapeHtml(e.name)}</b> — ${e.reactions} تفاعل</li>`).join('')
@@ -251,7 +250,7 @@ async function openAccountModal() {
   const token = localStorage.getItem('gh_account_token');
   if (!token) { $('#account-guest').classList.remove('hidden'); $('#account-info').classList.add('hidden'); return; }
   try {
-    const r = await fetch('/api/account/' + token);
+    const r = await fetch(window.ghannamApi('/api/account/') + token);
     if (!r.ok) throw new Error();
     const { account } = await r.json();
     renderAccountModal(account);
@@ -270,7 +269,7 @@ function renderAccountModal(acc) {
 async function saveAccount() {
   const name = localStorage.getItem('gh_name') || $('#home-name').value.trim() || 'لاعب';
   try {
-    const r = await fetch('/api/account', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name }) });
+    const r = await fetch(window.ghannamApi('/api/account'), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name }) });
     const { account } = await r.json();
     localStorage.setItem('gh_account_token', account.token);
     renderAccountModal(account);
@@ -281,7 +280,7 @@ async function saveAccount() {
 
 // ===== إعلان لوحة التحكم =====
 async function fetchAnnouncementOnce() {
-  try { const r = await fetch('/api/announcement'); const { text } = await r.json(); if (text) renderAnnouncement(text); } catch {}
+  try { const r = await fetch(window.ghannamApi('/api/announcement')); const { text } = await r.json(); if (text) renderAnnouncement(text); } catch {}
 }
 function renderAnnouncement(text) {
   const b = $('#announcement-banner');
@@ -383,7 +382,7 @@ async function openShare() {
   $('#share-code').textContent = state.code;
   $('#share-link').value = url;
   $('#share-modal').classList.remove('hidden');
-  try { const r = await fetch('/api/qr?url=' + encodeURIComponent(url)); const { dataUrl } = await r.json(); $('#qr-img').src = dataUrl; } catch {}
+  try { const r = await fetch(window.ghannamApi('/api/qr?url=') + encodeURIComponent(url)); const { dataUrl } = await r.json(); $('#qr-img').src = dataUrl; } catch {}
 }
 
 async function openStreamerPanel() {
@@ -392,7 +391,7 @@ async function openStreamerPanel() {
   $('#overlay-link').value = overlayUrl;
   $('#audience-link').value = audienceUrl;
   $('#streamer-modal').classList.remove('hidden');
-  try { const r = await fetch('/api/qr?url=' + encodeURIComponent(audienceUrl)); const { dataUrl } = await r.json(); $('#audience-qr').src = dataUrl; } catch {}
+  try { const r = await fetch(window.ghannamApi('/api/qr?url=') + encodeURIComponent(audienceUrl)); const { dataUrl } = await r.json(); $('#audience-qr').src = dataUrl; } catch {}
   renderStreamerPlayers(state.room);
 }
 
@@ -505,7 +504,7 @@ function initPhaseButtons() {
   wt.onkeydown = (e) => { if (e.key === 'Enter') submitText(); };
   $('#btn-submit-text').onclick = submitText;
   $('#btn-suggest').onclick = async () => {
-    const r = await fetch('/api/phrase' + (state.room?.settings?.category ? '?category=' + encodeURIComponent(state.room.settings.category) : ''));
+    const r = await fetch(window.ghannamApi('/api/phrase') + (state.room?.settings?.category ? '?category=' + encodeURIComponent(state.room.settings.category) : ''));
     const { phrase } = await r.json();
     wt.value = phrase; $('#write-count').textContent = phrase.length;
   };

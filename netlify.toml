@@ -1,0 +1,7 @@
+# إعداد نشر واجهة "رسامين غنام" على Netlify (استضافة ساكنة لمجلد public فقط)
+# ملاحظة مهمة: هذا الملف ينشر الواجهة فقط. الخادم (WebSocket + REST) لا يمكنه
+# العمل على Netlify لأنه يحتاج عملية Node.js دائمة — انشره على Render (راجع render.yaml)
+# ثم عدّل GHANNAM_API_ORIGIN في public/js/config.js ليشير إلى رابط ذلك الخادم.
+
+[build]
+  publish = "public"

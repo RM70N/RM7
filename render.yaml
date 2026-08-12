@@ -1,0 +1,17 @@
+# إعداد نشر خادم "رسامين غنام" (Node.js + WebSocket) على Render
+# هذا هو الجزء اللي لا يمكن تشغيله على Netlify. بعد النشر، انسخ رابط الخدمة
+# (مثال: https://ghannam-painters.onrender.com) وضعه في public/js/config.js
+# ضمن GHANNAM_API_ORIGIN قبل نشر الواجهة على Netlify.
+services:
+  - type: web
+    name: ghannam-painters
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/modes
+    envVars:
+      - key: ADMIN_TOKEN
+        generateValue: true
+      - key: NODE_VERSION
+        value: 20

@@ -4,7 +4,7 @@ function toast(msg) { const t = $('#toast'); t.textContent = msg; t.className = 
 function escapeHtml(s) { return (s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
 async function load() {
-  const r = await fetch('/api/gallery');
+  const r = await fetch(window.ghannamApi('/api/gallery'));
   const { items } = await r.json();
   const grid = $('#gallery-grid');
   if (!items.length) { $('#gallery-empty').classList.remove('hidden'); return; }
@@ -22,7 +22,7 @@ async function load() {
       <div class="gfoot"><span>من غرفة ${escapeHtml(item.roomCode)}</span><button class="btn btn-ghost btn-sm" data-vote>👍 ${item.votes}</button></div>
     `;
     el.querySelector('[data-vote]').onclick = async (e) => {
-      const r2 = await fetch(`/api/gallery/${item.id}/vote`, { method: 'POST' });
+      const r2 = await fetch(window.ghannamApi(`/api/gallery/${item.id}/vote`), { method: 'POST' });
       const { votes } = await r2.json();
       e.target.textContent = `👍 ${votes}`;
       toast('شكرًا لتصويتك!');

@@ -28,7 +28,7 @@ async function init() {
 
   // التحقق من حالة الغرفة
   try {
-    const r = await fetch('/api/room/' + encodeURIComponent(code));
+    const r = await fetch(window.ghannamApi('/api/room/') + encodeURIComponent(code));
     const info = await r.json();
     if (!info.exists) return showError('هذه الغرفة لم تعد متاحة');
     if (info.locked) return showError('الغرفة مقفلة — لا يمكن الانضمام');

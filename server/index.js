@@ -18,6 +18,16 @@ if (!process.env.ADMIN_TOKEN) console.warn('تحذير: لم يُحدَّد ADMI
 
 const app = express();
 app.use(express.json());
+
+// CORS: يسمح باستضافة الواجهة (public/) على نطاق منفصل عن الخادم — مثل نشرها
+// على Netlify بينما يعمل الخادم على Render/Railway. WebSocket لا يحتاج CORS.
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, x-admin-token');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
 const server = createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws' });
 const manager = new RoomManager();

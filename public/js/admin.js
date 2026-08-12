@@ -6,7 +6,7 @@ function toast(msg, kind = '') { const t = $('#toast'); t.textContent = msg; t.c
 function escapeHtml(s) { return (s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
 async function api(path, opts = {}) {
-  const r = await fetch(path, { ...opts, headers: { 'content-type': 'application/json', 'x-admin-token': TOKEN, ...(opts.headers || {}) } });
+  const r = await fetch(window.ghannamApi(path), { ...opts, headers: { 'content-type': 'application/json', 'x-admin-token': TOKEN, ...(opts.headers || {}) } });
   if (r.status === 401) { toast('رمز إدارة غير صحيح', 'err'); throw new Error('unauthorized'); }
   return r.json();
 }
