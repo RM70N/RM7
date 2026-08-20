@@ -1,0 +1,41 @@
+<!-- ==========================================================================
+  قصاصة تتبّع نقرات رابط "احسمها" — تُضاف في موقع ehsmaha.com الأساسي.
+  تُسجّل كل نقرة في مجموعة ahsemhaLinkClicks مع اسم صاحب الحساب (إن كان مسجّلاً).
+  لوحة "ادمن احسمها" تقرأ هذه المجموعة وتعرض العدد والأسماء لحظياً.
+
+  طريقة الإضافة:
+  1) ضع هذا السكربت داخل صفحة ehsmaha (بعد تهيئة Firebase الموجودة لديك).
+  2) أعطِ رابط/زر "احسمها" السمة  data-ahsemha-link  مثال:
+        <a href="..." data-ahsemha-link>احسمها</a>
+     أو نادِ الدالة يدوياً عند النقر:  trackAhsemhaClick('home-hero')
+  ملاحظة: يستخدم نفس db و currentUser/currentUsername الموجودين في ehsmaha.
+  ========================================================================== -->
+<script type="module">
+  import { getFirestore, collection, addDoc, serverTimestamp }
+    from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+  // إن كان لديك db مُصدَّراً مسبقاً استخدمه؛ وإلا اشتقّه من نفس app.
+  const _db = window.db || getFirestore();
+
+  window.trackAhsemhaClick = async function (target) {
+    try {
+      // اعتمد على متغيرات ehsmaha الحالية لهوية المستخدم (إن وُجدت).
+      const user = window.currentUser || null;
+      const uname = window.currentUsername || (user && user.email) || null;
+      await addDoc(collection(_db, "ahsemhaLinkClicks"), {
+        username: uname || null,
+        usernameLower: uname ? String(uname).toLowerCase() : null,
+        uid: (user && user.uid) || null,
+        target: target || "ahsemha-link",
+        clickedAt: serverTimestamp(),
+        page: location.pathname
+      });
+    } catch (e) { /* تتبّع best-effort — لا يعطّل الموقع أبداً */ }
+  };
+
+  // ربط تلقائي لأي عنصر يحمل data-ahsemha-link
+  document.addEventListener("click", (e) => {
+    const el = e.target.closest("[data-ahsemha-link]");
+    if (el) window.trackAhsemhaClick(el.getAttribute("data-ahsemha-link") || "ahsemha-link");
+  }, true);
+</script>
