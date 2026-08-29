@@ -574,3 +574,90 @@ export const searchApi = {
     ),
   page: (url: string) => api.get<PageContent>(`/search/page?url=${encodeURIComponent(url)}`),
 };
+
+// ── الاستوديو البصري ──
+
+export type MediaKind = 'image' | 'video' | 'motion';
+export type MediaStatus = 'queued' | 'rendering' | 'ready' | 'failed';
+
+export interface MediaAssetItem {
+  id: string;
+  kind: MediaKind;
+  title: string;
+  prompt: string;
+  status: MediaStatus;
+  mime: string | null;
+  width: number | null;
+  height: number | null;
+  durationMs: number | null;
+  sizeBytes: number | null;
+  error: string | null;
+  hasThumb: boolean;
+  createdAt: string;
+}
+
+export interface Palette {
+  id: string;
+  label: string;
+  bg: string;
+  fg: string;
+  accent: string;
+  muted: string;
+}
+
+export interface ImageTemplate {
+  id: string;
+  label: string;
+  note: string;
+  width: number;
+  height: number;
+  fields: { key: string; label: string; multiline?: boolean; optional?: boolean }[];
+}
+
+export interface MotionTemplate {
+  id: string;
+  label: string;
+  note: string;
+  defaultDuration: number;
+}
+
+export interface StudioResponse {
+  renderer: { available: boolean; executablePath: string | null; reason: string | null };
+  ffmpeg: { available: boolean; version: string | null };
+  imageTemplates: ImageTemplate[];
+  motionTemplates: MotionTemplate[];
+  palettes: Palette[];
+  limits: { maxDurationSec: number; maxFps: number };
+  assets: MediaAssetItem[];
+}
+
+export const studioApi = {
+  overview: (kind?: MediaKind) =>
+    api.get<StudioResponse>(`/studio${kind ? `?kind=${kind}` : ''}`),
+  createImage: (body: {
+    template: string;
+    palette: string;
+    title: string;
+    subtitle?: string;
+    badge?: string;
+  }) => api.post<MediaAssetItem>('/studio/image', body),
+  createMotion: (body: {
+    template: string;
+    palette: string;
+    title: string;
+    subtitle?: string;
+    durationSec: number;
+    width: number;
+    height: number;
+    fps: number;
+  }) => api.post<MediaAssetItem>('/studio/motion', body),
+  createVideo: (body: {
+    title?: string;
+    imageIds: string[];
+    secondsPerImage: number;
+    fps?: number;
+  }) => api.post<MediaAssetItem>('/studio/video', body),
+  remove: (id: string) => api.delete<void>(`/studio/${id}`),
+  fileUrl: (id: string, thumb = false) => `/api/studio/${id}/file${thumb ? '?thumb=1' : ''}`,
+  downloadUrl: (id: string) => `/api/studio/${id}/download`,
+};

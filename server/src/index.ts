@@ -4,6 +4,7 @@ import { logger } from './lib/logger.js';
 import { connectDatabase, disconnectDatabase } from './db/prisma.js';
 import { ensureStorage } from './lib/storage.js';
 import { ensureOwner, purgeExpiredSessions } from './services/auth.service.js';
+import { closeRenderer } from './services/renderer.service.js';
 
 const SESSION_PURGE_INTERVAL_MS = 60 * 60 * 1000;
 
@@ -32,7 +33,9 @@ async function main(): Promise<void> {
     logger.info(`استلمنا ${signal} — نطفي بهدوء`);
     clearInterval(purgeTimer);
     server.close(() => {
-      void disconnectDatabase().finally(() => process.exit(0));
+      void closeRenderer()
+        .then(() => disconnectDatabase())
+        .finally(() => process.exit(0));
     });
     setTimeout(() => process.exit(1), 10_000).unref();
   };

@@ -44,6 +44,12 @@ const schema = z.object({
   /** عدد الخيوط (0 = تلقائي) */
   ENGINE_THREADS: z.coerce.number().int().min(0).default(0),
 
+  // --- الاستوديو البصري ---
+  /** مسار متصفح كروميوم للرسم (اختياري — نبحث عنه تلقائيًا) */
+  CHROMIUM_PATH: z.string().optional().default(''),
+  /** مسار ffmpeg (اختياري) */
+  FFMPEG_PATH: z.string().optional().default('ffmpeg'),
+
   // --- البحث الحي ---
   /** عنوان SearxNG مستضاف عندك (اختياري — وإلا نستخدم DuckDuckGo) */
   SEARXNG_URL: z.string().optional().default(''),

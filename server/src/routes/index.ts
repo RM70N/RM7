@@ -5,6 +5,7 @@ import memoryRoutes from './memory.routes.js';
 import knowledgeRoutes from './knowledge.routes.js';
 import siteRoutes from './site.routes.js';
 import searchRoutes from './search.routes.js';
+import studioRoutes from './studio.routes.js';
 
 const router = Router();
 
@@ -23,5 +24,6 @@ router.use('/memory', memoryRoutes);
 router.use('/knowledge', knowledgeRoutes);
 router.use('/sites', siteRoutes);
 router.use('/search', searchRoutes);
+router.use('/studio', studioRoutes);
 
 export default router;

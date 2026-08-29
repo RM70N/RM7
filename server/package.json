@@ -38,6 +38,7 @@
     "multer": "^2.3.0",
     "node-llama-cpp": "^3.20.0",
     "pdf-parse": "^2.4.5",
+    "playwright-core": "^1.62.1",
     "tesseract.js": "^7.0.0",
     "xlsx": "^0.18.5",
     "yauzl-promise": "^4.0.0",
