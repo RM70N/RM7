@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { AppShell } from '@/components/AppShell';
 import { Spinner } from '@/components/Spinner';
 import { LoginPage } from '@/pages/LoginPage';
+import { SetupPage } from '@/pages/SetupPage';
 import { ChatPage } from '@/pages/ChatPage';
 import { MemoryPage } from '@/pages/MemoryPage';
 import { SkillsPage } from '@/pages/SkillsPage';
@@ -12,7 +13,7 @@ import { StudioPage } from '@/pages/StudioPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 
 function Gate() {
-  const { owner, loading } = useAuth();
+  const { owner, loading, initialized, refresh } = useAuth();
 
   if (loading) {
     return (
@@ -21,6 +22,9 @@ function Gate() {
       </div>
     );
   }
+
+  // سيرفر جديد ما فيه حساب بعد — نخليه يحدد باسورده من هنا
+  if (!owner && !initialized) return <SetupPage onDone={() => void refresh()} />;
 
   if (!owner) return <LoginPage />;
 

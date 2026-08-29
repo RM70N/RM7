@@ -61,6 +61,26 @@ export async function ensureOwner(): Promise<Owner | null> {
   return owner;
 }
 
+/**
+ * ينشئ حساب المالك من صفحة الإعداد الأولى.
+ *
+ * يشتغل مرة وحدة بس: إذا فيه مالك أصلًا يرفض. هذا يخلي التثبيت على
+ * سيرفر جديد ممكن من المتصفح بدون دخول للسيرفر نفسه.
+ */
+export async function setupOwner(password: string): Promise<void> {
+  const existing = await prisma.owner.count();
+  if (existing > 0) {
+    throw new AppError(409, 'ALREADY_INITIALIZED', 'النظام مهيّأ أصلًا — سجّل دخول عادي');
+  }
+  if (password.length < 12) {
+    throw new AppError(400, 'WEAK_PASSWORD', 'الباسورد لازم 12 حرف على الأقل');
+  }
+
+  await prisma.owner.create({ data: { passwordHash: await hashPassword(password) } });
+  logger.info('أنشأنا حساب المالك من صفحة الإعداد الأولى');
+  await recordAudit('owner.setup', null);
+}
+
 export interface SessionResult {
   token: string;
   expiresAt: Date;

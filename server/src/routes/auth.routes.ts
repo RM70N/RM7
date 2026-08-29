@@ -5,7 +5,13 @@ import { prisma } from '../db/prisma.js';
 import { asyncHandler } from '../middleware/error.middleware.js';
 import { optionalAuth, requireAuth, SESSION_COOKIE } from '../middleware/auth.middleware.js';
 import { loginLimiter } from '../middleware/security.middleware.js';
-import { changePassword, login, logout, logoutAll } from '../services/auth.service.js';
+import {
+  changePassword,
+  login,
+  logout,
+  logoutAll,
+  setupOwner,
+} from '../services/auth.service.js';
 
 const router = Router();
 
@@ -57,6 +63,30 @@ router.get(
   asyncHandler(async (_req, res) => {
     const ownerCount = await prisma.owner.count();
     res.json({ initialized: ownerCount > 0 });
+  }),
+);
+
+/**
+ * الإعداد الأول — يحدد باسورد المالك على سيرفر جديد.
+ * مغلق تلقائيًا بعد إنشاء الحساب، وتحت نفس حد المحاولات.
+ */
+router.post(
+  '/setup',
+  loginLimiter,
+  asyncHandler(async (req, res) => {
+    const { password } = z
+      .object({ password: z.string().min(12, 'الباسورد لازم 12 حرف على الأقل').max(200) })
+      .parse(req.body);
+
+    await setupOwner(password);
+
+    // ندخّله على طول عشان ما يعيد كتابة الباسورد
+    const { token, expiresAt } = await login(password, {
+      userAgent: req.get('user-agent') ?? undefined,
+      ip: req.ip,
+    });
+    res.cookie(SESSION_COOKIE, token, cookieOptions(expiresAt));
+    res.status(201).json({ ok: true, expiresAt });
   }),
 );
 
