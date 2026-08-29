@@ -11,6 +11,7 @@ import {
   parseExtraction,
   saveExtracted,
 } from './memory.service.js';
+import { knowledgeForPrompt } from './knowledge.service.js';
 import { logger } from '../lib/logger.js';
 import { env } from '../lib/env.js';
 
@@ -152,11 +153,15 @@ export async function sendMessage(options: SendOptions): Promise<SendResult> {
   let streamed = '';
   const startedAt = Date.now();
 
-  // نحقن الذاكرة الدائمة الأنسب للرسالة الحالية
-  const memories = await memoriesForPrompt(options.text);
+  // نحقن الذاكرة الدائمة والمعرفة الأنسب للرسالة الحالية
+  const [memories, knowledge] = await Promise.all([
+    memoriesForPrompt(options.text),
+    knowledgeForPrompt(options.text),
+  ]);
   const context: PersonaContext = {
     ...options.context,
     ...(memories.length > 0 ? { memories } : {}),
+    ...(knowledge.length > 0 ? { knowledge } : {}),
   };
 
   let result: Awaited<ReturnType<typeof generate>> | null = null;

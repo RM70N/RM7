@@ -219,14 +219,19 @@ model Chunk {
   meta       Json?
   createdAt  DateTime @default(now())
 
-  /// متجه التضمين — يُقرأ ويُكتب عبر استعلامات SQL خام
-  embedding Unsupported("vector(384)")?
+  /// متجه التضمين — بدون أبعاد ثابتة عشان يشتغل مع أي نموذج تضمين.
+  /// يُقرأ ويُكتب عبر استعلامات SQL خام، والأبعاد محفوظة في dim.
+  embedding Unsupported("vector")?
+
+  /// أبعاد المتجه — نستخدمها لتجاهل المقاطع المفهرسة بنموذج مختلف
+  dim Int?
 
   document Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
   skill    Skill?    @relation(fields: [skillId], references: [id], onDelete: Cascade)
 
   @@index([documentId])
   @@index([skillId])
+  @@index([dim])
   @@map("chunks")
 }
 

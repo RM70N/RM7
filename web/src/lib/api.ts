@@ -297,3 +297,92 @@ export const memoryApi = {
   clear: (source?: 'auto' | 'manual') =>
     api.post<{ ok: true; removed: number }>('/memory/clear', { source }),
 };
+
+// ── المهارات وقاعدة المعرفة ──
+
+export interface SkillItem {
+  id: string;
+  title: string;
+  description: string;
+  content: string;
+  tags: string[];
+  enabled: boolean;
+  alwaysOn: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DocumentItem {
+  id: string;
+  filename: string;
+  mime: string;
+  size: number;
+  status: 'pending' | 'processing' | 'ready' | 'failed';
+  preview: string | null;
+  textLength: number;
+  pageCount: number | null;
+  error: string | null;
+  chunkCount: number;
+  createdAt: string;
+}
+
+export interface KnowledgeStats {
+  skills: number;
+  activeSkills: number;
+  documents: number;
+  readyDocuments: number;
+  chunks: number;
+  embedded: number;
+}
+
+export interface EmbeddingInfo {
+  available: boolean;
+  dimensions: number | null;
+  source: 'dedicated' | 'chat-model' | 'none';
+  modelName: string | null;
+  reason: string | null;
+}
+
+export interface KnowledgeResponse {
+  skills: SkillItem[];
+  documents: DocumentItem[];
+  stats: KnowledgeStats;
+  embedding: EmbeddingInfo;
+  supportedTypes: Record<string, string>;
+}
+
+export interface SkillDraft {
+  title: string;
+  description?: string;
+  content: string;
+  tags?: string[];
+  enabled?: boolean;
+  alwaysOn?: boolean;
+}
+
+export interface RetrievedChunk {
+  id: string;
+  content: string;
+  source: string;
+  score: number;
+  kind: 'skill' | 'document';
+}
+
+export const knowledgeApi = {
+  overview: () => api.get<KnowledgeResponse>('/knowledge'),
+  createSkill: (draft: SkillDraft) => api.post<SkillItem>('/knowledge/skills', draft),
+  updateSkill: (id: string, draft: Partial<SkillDraft>) =>
+    api.patch<SkillItem>(`/knowledge/skills/${id}`, draft),
+  removeSkill: (id: string) => api.delete<void>(`/knowledge/skills/${id}`),
+  removeDocument: (id: string) => api.delete<void>(`/knowledge/documents/${id}`),
+  downloadUrl: (id: string) => `/api/knowledge/documents/${id}/download`,
+  search: (q: string) =>
+    api.get<{ results: RetrievedChunk[] }>(`/knowledge/search?q=${encodeURIComponent(q)}`),
+  reindex: () => api.post<{ skills: number; documents: number }>('/knowledge/reindex'),
+
+  upload: async (files: File[]) => {
+    const form = new FormData();
+    for (const file of files) form.append('files', file);
+    return api.post<{ documents: DocumentItem[] }>('/knowledge/documents', form);
+  },
+};

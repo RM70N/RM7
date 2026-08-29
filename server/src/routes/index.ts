@@ -2,6 +2,7 @@ import { Router } from 'express';
 import authRoutes from './auth.routes.js';
 import chatRoutes from './chat.routes.js';
 import memoryRoutes from './memory.routes.js';
+import knowledgeRoutes from './knowledge.routes.js';
 
 const router = Router();
 
@@ -17,5 +18,6 @@ router.get('/health', (_req, res) => {
 router.use('/auth', authRoutes);
 router.use('/chat', chatRoutes);
 router.use('/memory', memoryRoutes);
+router.use('/knowledge', knowledgeRoutes);
 
 export default router;
