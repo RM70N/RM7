@@ -252,10 +252,21 @@ router.get(
 /**
  * يقدّم ملفات الموقع للمعاينة.
  *
- * الحماية: الواجهة تعرضها داخل iframe بـ sandbox بدون allow-same-origin،
- * فأي سكربت داخل الموقع المرفوع يشتغل في أصل معزول ولا يقدر يوصل
- * لجلستك ولا لواجهة النظام.
+ * الحماية طبقتان:
+ *
+ * 1. الواجهة تعرضها داخل iframe بـ sandbox بدون allow-same-origin.
+ * 2. ترويسة CSP sandbox على كل استجابة — وهذي هي الأهم، لأنها تجبر
+ *    الصفحة على أصل معزول حتى لو فُتحت مباشرة في تبويب جديد. بدونها
+ *    أي سكربت في موقع مرفوع (قالب جاهز نزّلته من النت مثلًا) يقدر
+ *    يشتغل على أصل النظام ويقرأ جلستك ومفاتيحك وذاكرتك.
  */
+
+/**
+ * سياسة المعاينة: أصل معزول، بدون وصول لأي شي من أصل النظام.
+ * نسمح بالسكربتات والنماذج عشان الموقع يشتغل طبيعي داخل عزلته.
+ */
+const PREVIEW_SANDBOX =
+  'sandbox allow-scripts allow-forms allow-popups allow-modals allow-pointer-lock';
 router.get(
   '/:id/preview/*',
   asyncHandler(async (req, res) => {
@@ -268,10 +279,12 @@ router.get(
     try {
       const { content, mime } = await readProjectFile(id, relPath);
       res.setHeader('Content-Type', mime);
+      res.setHeader('Content-Security-Policy', PREVIEW_SANDBOX);
       res.setHeader('Cache-Control', 'no-store');
       res.setHeader('X-Content-Type-Options', 'nosniff');
       res.send(content);
     } catch {
+      res.setHeader('Content-Security-Policy', PREVIEW_SANDBOX);
       res.status(404).type('text/html; charset=utf-8').send(
         `<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8">
          <body style="font-family:system-ui;padding:2rem;background:#15171f;color:#eceef2">

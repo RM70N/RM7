@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import { env } from './lib/env.js';
 import routes from './routes/index.js';
+import v1Routes from './routes/v1.routes.js';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.js';
 import {
   generalLimiter,
@@ -35,6 +36,9 @@ export function createApp(): Express {
   app.get('/robots.txt', (_req, res) => {
     res.type('text/plain').send('User-agent: *\nDisallow: /\n');
   });
+
+  // API احسمها العام — بمفاتيح يصدرها المالك
+  app.use('/api/v1', v1Routes);
 
   app.use('/api', routes);
 

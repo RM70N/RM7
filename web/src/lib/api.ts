@@ -661,3 +661,29 @@ export const studioApi = {
   fileUrl: (id: string, thumb = false) => `/api/studio/${id}/file${thumb ? '?thumb=1' : ''}`,
   downloadUrl: (id: string) => `/api/studio/${id}/download`,
 };
+
+// ── مفاتيح API ──
+
+export interface ApiKeyItem {
+  id: string;
+  name: string;
+  prefix: string;
+  scopes: string[];
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+}
+
+export interface ApiKeyList {
+  keys: ApiKeyItem[];
+  scopes: string[];
+  labels: Record<string, string>;
+}
+
+export const keysApi = {
+  list: () => api.get<ApiKeyList>('/keys'),
+  issue: (name: string, scopes: string[]) =>
+    api.post<{ record: ApiKeyItem; secret: string }>('/keys', { name, scopes }),
+  revoke: (id: string) => api.post<{ ok: true }>(`/keys/${id}/revoke`),
+  remove: (id: string) => api.delete<void>(`/keys/${id}`),
+};

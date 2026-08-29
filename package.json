@@ -22,7 +22,9 @@
     "typecheck": "npm run typecheck -w server && npm run typecheck -w web",
     "lint": "npm run lint -w server && npm run lint -w web",
     "test": "npm run test -w server",
-    "test:e2e": "node tests/e2e.mjs && node tests/memory.e2e.mjs && node tests/knowledge.e2e.mjs && node tests/sites.e2e.mjs && node tests/search.e2e.mjs && node tests/studio.e2e.mjs"
+    "test:e2e": "node tests/e2e.mjs && node tests/memory.e2e.mjs && node tests/knowledge.e2e.mjs && node tests/sites.e2e.mjs && node tests/search.e2e.mjs && node tests/studio.e2e.mjs && node tests/security.e2e.mjs",
+    "test:security": "node tests/security.e2e.mjs",
+    "verify": "npm run typecheck && npm run test && npm run build"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
