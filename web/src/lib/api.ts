@@ -72,6 +72,8 @@ export const api = {
     }),
   patch: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: 'PATCH', body: JSON.stringify(body ?? {}) }),
+  put: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: 'PUT', body: JSON.stringify(body ?? {}) }),
   delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
 };
 
@@ -386,3 +388,154 @@ export const knowledgeApi = {
     return api.post<{ documents: DocumentItem[] }>('/knowledge/documents', form);
   },
 };
+
+// ── مشاريع المواقع ──
+
+export interface SiteProjectItem {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  status: 'importing' | 'ready' | 'failed';
+  fileCount: number;
+  totalBytes: number;
+  entryFile: string | null;
+  error: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SiteFileNode {
+  relPath: string;
+  size: number;
+  mime: string;
+  isText: boolean;
+}
+
+export interface SiteRevisionItem {
+  id: string;
+  summary: string;
+  changes: { relPath: string; action: string; beforeLength: number; afterLength: number }[];
+  createdAt: string;
+}
+
+export interface SiteDetail {
+  project: SiteProjectItem;
+  files: SiteFileNode[];
+  revisions: SiteRevisionItem[];
+}
+
+export interface DiffPreviewLine {
+  kind: string;
+  text: string;
+}
+
+export interface FileDiff {
+  relPath: string;
+  action: string;
+  added: number;
+  removed: number;
+  preview: DiffPreviewLine[];
+}
+
+export const siteApi = {
+  list: () => api.get<{ projects: SiteProjectItem[]; maxArchiveMb: number }>('/sites'),
+  get: (id: string) => api.get<SiteDetail>(`/sites/${id}`),
+  remove: (id: string) => api.delete<void>(`/sites/${id}`),
+  readFile: (id: string, path: string) =>
+    api.get<{ path: string; content: string }>(
+      `/sites/${id}/file?path=${encodeURIComponent(path)}`,
+    ),
+  writeFile: (id: string, path: string, content: string) =>
+    api.put<{ revisionId: string; changes: number }>(`/sites/${id}/file`, { path, content }),
+  revert: (id: string, revisionId: string) =>
+    api.post<{ ok: true }>(`/sites/${id}/revert/${revisionId}`),
+  downloadUrl: (id: string) => `/api/sites/${id}/download`,
+  previewUrl: (id: string) => `/api/sites/${id}/preview/`,
+
+  upload: async (file: File, name?: string) => {
+    const form = new FormData();
+    form.append('archive', file);
+    if (name) form.append('name', name);
+    return api.post<{ project: SiteProjectItem; fileCount: number; skipped: number }>(
+      '/sites',
+      form,
+    );
+  },
+};
+
+export interface EditStreamHandlers {
+  onChunk: (text: string) => void;
+  onDone: (payload: {
+    summary: string;
+    revisionId: string | null;
+    changed: number;
+    diffs: FileDiff[];
+    raw?: string;
+  }) => void;
+  onError: (message: string) => void;
+}
+
+/** يطلب تعديل موقع ويستقبل تقدّم المحرك حرفًا بحرف. */
+export function streamSiteEdit(
+  projectId: string,
+  instruction: string,
+  handlers: EditStreamHandlers,
+): () => void {
+  const controller = new AbortController();
+
+  void (async () => {
+    try {
+      const response = await fetch(`/api/sites/${projectId}/edit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instruction }),
+        credentials: 'same-origin',
+        signal: controller.signal,
+      });
+
+      if (!response.ok || !response.body) {
+        const body = (await response.json().catch(() => null)) as ApiErrorBody | null;
+        handlers.onError(body?.error?.message ?? 'ما قدرنا نعدّل الموقع');
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const blocks = buffer.split('\n\n');
+        buffer = blocks.pop() ?? '';
+
+        for (const block of blocks) {
+          const lines = block.split('\n');
+          const eventLine = lines.find((l) => l.startsWith('event: '));
+          const dataLine = lines.find((l) => l.startsWith('data: '));
+          if (!eventLine || !dataLine) continue;
+
+          const event = eventLine.slice(7).trim();
+          let payload: unknown;
+          try {
+            payload = JSON.parse(dataLine.slice(6));
+          } catch {
+            continue;
+          }
+
+          if (event === 'chunk') handlers.onChunk((payload as { text: string }).text);
+          else if (event === 'done') handlers.onDone(payload as Parameters<EditStreamHandlers['onDone']>[0]);
+          else if (event === 'error') handlers.onError((payload as { message: string }).message);
+        }
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+      handlers.onError('انقطع الاتصال بالسيرفر');
+    }
+  })();
+
+  return () => controller.abort();
+}

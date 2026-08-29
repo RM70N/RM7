@@ -14,6 +14,9 @@ export function securityHeaders(): RequestHandler {
     crossOriginEmbedderPolicy: false,
     crossOriginResourcePolicy: { policy: 'same-site' },
     referrerPolicy: { policy: 'no-referrer' },
+    // نطفيها لأن صفحات معاينة المواقع تُقدَّم من نفس الأصل بدونها،
+    // والتعارض يطلع تحذيرًا في كونسول المتصفح بدون أي فايدة أمنية هنا
+    originAgentCluster: false,
     hsts: env.isProduction ? { maxAge: 31_536_000, includeSubDomains: true } : false,
   });
 }
