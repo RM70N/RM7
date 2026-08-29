@@ -102,3 +102,144 @@ export const authApi = {
       newPassword,
     }),
 };
+
+// ── الشات ومحرك احسمها ──
+
+export interface ConversationSummary {
+  id: string;
+  title: string;
+  pinned: boolean;
+  updatedAt: string;
+  messageCount: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  createdAt: string;
+  model: string | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+}
+
+export interface EngineStatus {
+  ready: boolean;
+  modelPath: string | null;
+  modelName: string | null;
+  modelSizeBytes: number | null;
+  contextSize: number | null;
+  gpu: string;
+  cpuCores: number;
+  llamaRelease: string | null;
+  catalog: {
+    id: string;
+    label: string;
+    note: string;
+    sizeGb: number;
+    minRamGb: number;
+    saudi: number;
+  }[];
+}
+
+export const chatApi = {
+  engine: () => api.get<EngineStatus>('/chat/engine'),
+  list: () => api.get<ConversationSummary[]>('/chat/conversations'),
+  create: (title?: string) =>
+    api.post<{ id: string; title: string }>('/chat/conversations', { title }),
+  get: (id: string) =>
+    api.get<{ conversation: { id: string; title: string }; messages: ChatMessage[] }>(
+      `/chat/conversations/${id}`,
+    ),
+  rename: (id: string, title: string) =>
+    api.patch<{ id: string }>(`/chat/conversations/${id}`, { title }),
+  pin: (id: string, pinned: boolean) =>
+    api.patch<{ id: string }>(`/chat/conversations/${id}/pin`, { pinned }),
+  remove: (id: string) => api.delete<void>(`/chat/conversations/${id}`),
+};
+
+export interface StreamHandlers {
+  onChunk: (text: string) => void;
+  onDone: (payload: {
+    userMessage: ChatMessage;
+    assistantMessage: ChatMessage;
+    durationMs: number;
+    partial: boolean;
+  }) => void;
+  onError: (message: string) => void;
+}
+
+/**
+ * يرسل رسالة ويستقبل الرد حرفًا بحرف عبر SSE.
+ * يرجع دالة إلغاء توقف البث.
+ */
+export function streamMessage(
+  conversationId: string,
+  text: string,
+  handlers: StreamHandlers,
+): () => void {
+  const controller = new AbortController();
+
+  void (async () => {
+    try {
+      const response = await fetch(`/api/chat/conversations/${conversationId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+        credentials: 'same-origin',
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as ApiErrorBody | null;
+        handlers.onError(body?.error?.message ?? 'المحرك ما قدر يرد');
+        return;
+      }
+      if (!response.body) {
+        handlers.onError('ما وصلنا أي رد من السيرفر');
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const blocks = buffer.split('\n\n');
+        buffer = blocks.pop() ?? '';
+
+        for (const block of blocks) {
+          const lines = block.split('\n');
+          const eventLine = lines.find((l) => l.startsWith('event: '));
+          const dataLine = lines.find((l) => l.startsWith('data: '));
+          if (!eventLine || !dataLine) continue;
+
+          const event = eventLine.slice(7).trim();
+          let payload: unknown;
+          try {
+            payload = JSON.parse(dataLine.slice(6));
+          } catch {
+            continue;
+          }
+
+          if (event === 'chunk') {
+            handlers.onChunk((payload as { text: string }).text);
+          } else if (event === 'done') {
+            handlers.onDone(payload as Parameters<StreamHandlers['onDone']>[0]);
+          } else if (event === 'error') {
+            handlers.onError((payload as { message: string }).message);
+          }
+        }
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+      handlers.onError('انقطع الاتصال بالسيرفر');
+    }
+  })();
+
+  return () => controller.abort();
+}

@@ -30,10 +30,19 @@ const schema = z.object({
     .string()
     .min(1, 'ENCRYPTION_KEY مطلوب — ولّده بـ npm run gen:secrets -w server'),
 
-  AHSMAHA_ENGINE_KEY: z.string().optional().default(''),
-  AHSMAHA_MODEL: z.string().default('claude-opus-5'),
-  AHSMAHA_MODEL_FAST: z.string().default('claude-haiku-4-5-20251001'),
-  AHSMAHA_MAX_TOKENS: z.coerce.number().int().positive().default(8000),
+  // --- محرك احسمها (استدلال محلي بالكامل) ---
+  /** مجلد الأوزان */
+  ENGINE_MODELS_DIR: z.string().default('./.models'),
+  /** مسار ملف أوزان محدد (اختياري — وإلا يأخذ أول GGUF في المجلد) */
+  ENGINE_MODEL_PATH: z.string().optional().default(''),
+  /** حجم نافذة السياق */
+  ENGINE_CONTEXT_SIZE: z.coerce.number().int().positive().default(8192),
+  /** أقصى عدد رموز في الرد الواحد */
+  ENGINE_MAX_TOKENS: z.coerce.number().int().positive().default(2048),
+  /** درجة العشوائية: أقل = أدق، أعلى = أبدع */
+  ENGINE_TEMPERATURE: z.coerce.number().min(0).max(2).default(0.7),
+  /** عدد الخيوط (0 = تلقائي) */
+  ENGINE_THREADS: z.coerce.number().int().min(0).default(0),
 
   STORAGE_DIR: z.string().default('./storage'),
   MAX_UPLOAD_MB: z.coerce.number().int().positive().default(100),
