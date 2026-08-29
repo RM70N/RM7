@@ -45,9 +45,7 @@ export async function ensureOwner(): Promise<Owner | null> {
 
   const password = env.OWNER_PASSWORD?.trim();
   if (!password) {
-    logger.warn(
-      'ما فيه حساب مالك بعد. حط OWNER_PASSWORD في ملف .env وأعد التشغيل عشان ينحفظ مشفّر.',
-    );
+    logger.info('ما فيه حساب بعد — افتح الموقع في المتصفح وحدد باسوردك من صفحة الإعداد.');
     return null;
   }
   if (password.length < 12) {
