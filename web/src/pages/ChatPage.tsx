@@ -13,10 +13,13 @@ import {
   type ChatMessage,
   type ConversationSummary,
   type EngineStatus,
+  type SearchSource,
 } from '@/lib/api';
 import { ChatMessageBubble } from '@/components/ChatMessage';
 import { Logo } from '@/components/Logo';
+import { SearchIcon } from '@/components/Icons';
 import { Spinner } from '@/components/Spinner';
+import { Sources } from '@/components/Sources';
 
 const SUGGESTIONS = [
   'اشرح لي وش الفرق بين React وVue بالسعودي',
@@ -31,6 +34,9 @@ export function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [streamingText, setStreamingText] = useState('');
+  const [statusText, setStatusText] = useState<string | null>(null);
+  const [sourcesById, setSourcesById] = useState<Record<string, SearchSource[]>>({});
+  const [searchOn, setSearchOn] = useState(false);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -111,6 +117,7 @@ export function ChatPage() {
     setBusy(true);
     setDraft('');
     setStreamingText('');
+    setStatusText(null);
 
     try {
       let conversationId = activeId;
@@ -133,24 +140,38 @@ export function ChatPage() {
       setMessages((prev) => [...prev, optimistic]);
 
       await new Promise<void>((resolve) => {
-        cancelRef.current = streamMessage(conversationId!, text, {
-          onChunk: (chunk) => setStreamingText((prev) => prev + chunk),
-          onDone: (payload) => {
-            setMessages((prev) => [
-              ...prev.filter((m) => m.id !== optimistic.id),
-              payload.userMessage,
-              payload.assistantMessage,
-            ]);
-            setStreamingText('');
-            void refreshList();
-            resolve();
+        cancelRef.current = streamMessage(
+          conversationId!,
+          text,
+          {
+            onChunk: (chunk) => setStreamingText((prev) => prev + chunk),
+            onStatus: (status) => setStatusText(status),
+            onDone: (payload) => {
+              setMessages((prev) => [
+                ...prev.filter((m) => m.id !== optimistic.id),
+                payload.userMessage,
+                payload.assistantMessage,
+              ]);
+              if (payload.sources?.length) {
+                setSourcesById((prev) => ({
+                  ...prev,
+                  [payload.assistantMessage.id]: payload.sources,
+                }));
+              }
+              setStreamingText('');
+              setStatusText(null);
+              void refreshList();
+              resolve();
+            },
+            onError: (message) => {
+              setError(message);
+              setStreamingText('');
+              setStatusText(null);
+              resolve();
+            },
           },
-          onError: (message) => {
-            setError(message);
-            setStreamingText('');
-            resolve();
-          },
-        });
+          searchOn ? { forceSearch: true } : {},
+        );
       });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'ما قدرنا نرسل الرسالة');
@@ -250,11 +271,14 @@ export function ChatPage() {
           ) : (
             <>
               {messages.map((message) => (
-                <ChatMessageBubble
-                  key={message.id}
-                  role={message.role}
-                  content={message.content}
-                />
+                <div key={message.id}>
+                  <ChatMessageBubble role={message.role} content={message.content} />
+                  {sourcesById[message.id] ? (
+                    <div className="ps-11">
+                      <Sources sources={sourcesById[message.id]!} />
+                    </div>
+                  ) : null}
+                </div>
               ))}
               {streamingText ? (
                 <ChatMessageBubble role="assistant" content={streamingText} streaming />
@@ -262,7 +286,10 @@ export function ChatPage() {
               {busy && !streamingText ? (
                 <div className="flex gap-3">
                   <Logo size={32} />
-                  <div className="flex items-center gap-1 pt-2">
+                  <div className="flex items-center gap-2 pt-2">
+                    {statusText ? (
+                      <span className="text-sm text-ink-500 dark:text-ink-400">{statusText}</span>
+                    ) : null}
                     <span className="h-2 w-2 animate-pulse-dot rounded-full bg-brand-500" />
                     <span
                       className="h-2 w-2 animate-pulse-dot rounded-full bg-brand-500"
@@ -304,6 +331,21 @@ export function ChatPage() {
             rows={1}
             disabled={busy}
           />
+          <button
+            type="button"
+            onClick={() => setSearchOn((v) => !v)}
+            className={[
+              'btn !py-3.5 !px-3',
+              searchOn
+                ? 'bg-brand-600/15 text-brand-700 dark:text-brand-300'
+                : 'text-ink-500 hover:bg-ink-200/60 dark:text-ink-400 dark:hover:bg-ink-800/60',
+            ].join(' ')}
+            title={searchOn ? 'البحث الحي مفعّل لهذي الرسالة' : 'فعّل البحث الحي'}
+            aria-pressed={searchOn}
+            disabled={busy}
+          >
+            <SearchIcon className="h-4 w-4" />
+          </button>
           {busy ? (
             <button type="button" className="btn-ghost !py-3.5" onClick={handleStop}>
               وقّف

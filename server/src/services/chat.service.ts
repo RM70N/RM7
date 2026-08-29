@@ -12,6 +12,7 @@ import {
   saveExtracted,
 } from './memory.service.js';
 import { knowledgeForPrompt } from './knowledge.service.js';
+import { needsSearch, searchContext, type SearchResult } from './search.service.js';
 import { logger } from '../lib/logger.js';
 import { env } from '../lib/env.js';
 
@@ -106,7 +107,11 @@ export interface SendOptions {
   text: string;
   context?: PersonaContext;
   onChunk?: (chunk: string) => void;
+  /** يُنادى قبل التوليد لما نبدأ بحثًا حيًا */
+  onStatus?: (status: string) => void;
   signal?: AbortSignal;
+  /** يجبر البحث حتى لو الحسّاس ما شافه ضروريًا */
+  forceSearch?: boolean;
 }
 
 export interface SendResult {
@@ -115,6 +120,8 @@ export interface SendResult {
   durationMs: number;
   /** الرد ناقص لأن المستخدم قطع أو صار خطأ بالنص */
   partial: boolean;
+  /** مصادر البحث الحي إن استُخدم */
+  sources: SearchResult[];
 }
 
 /**
@@ -158,10 +165,26 @@ export async function sendMessage(options: SendOptions): Promise<SendResult> {
     memoriesForPrompt(options.text),
     knowledgeForPrompt(options.text),
   ]);
+
+  // بحث حي لما السؤال يحتاج معلومة محدثة
+  let sources: SearchResult[] = [];
+  let searchResults: string | undefined;
+
+  if (options.forceSearch || (env.AUTO_SEARCH && needsSearch(options.text))) {
+    options.onStatus?.('ندوّر لك على النت…');
+    const found = await searchContext(options.text);
+    if (found) {
+      searchResults = found.text;
+      sources = found.sources;
+      options.onStatus?.(`لقينا ${found.sources.length} مصدر`);
+    }
+  }
+
   const context: PersonaContext = {
     ...options.context,
     ...(memories.length > 0 ? { memories } : {}),
     ...(knowledge.length > 0 ? { knowledge } : {}),
+    ...(searchResults ? { searchResults } : {}),
   };
 
   let result: Awaited<ReturnType<typeof generate>> | null = null;
@@ -206,6 +229,7 @@ export async function sendMessage(options: SendOptions): Promise<SendResult> {
       outputTokens: result?.outputTokens ?? null,
       meta: {
         durationMs: result?.durationMs ?? Date.now() - startedAt,
+        ...(sources.length > 0 ? { sources: sources as unknown as object[] } : {}),
         // الرد ناقص: إما المستخدم قطع، أو صار خطأ بالنص
         partial: Boolean(failure) || (result?.stopped ?? false),
         ...(result?.droppedContext?.length
@@ -240,6 +264,7 @@ export async function sendMessage(options: SendOptions): Promise<SendResult> {
     assistantMessage: toPlain(assistantMessage),
     durationMs: result?.durationMs ?? Date.now() - startedAt,
     partial: Boolean(failure) || (result?.stopped ?? false),
+    sources,
   };
 }
 

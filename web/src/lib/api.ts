@@ -160,13 +160,21 @@ export const chatApi = {
   remove: (id: string) => api.delete<void>(`/chat/conversations/${id}`),
 };
 
+export interface SearchSource {
+  title: string;
+  url: string;
+  snippet: string;
+}
+
 export interface StreamHandlers {
   onChunk: (text: string) => void;
+  onStatus?: (text: string) => void;
   onDone: (payload: {
     userMessage: ChatMessage;
     assistantMessage: ChatMessage;
     durationMs: number;
     partial: boolean;
+    sources: SearchSource[];
   }) => void;
   onError: (message: string) => void;
 }
@@ -179,6 +187,7 @@ export function streamMessage(
   conversationId: string,
   text: string,
   handlers: StreamHandlers,
+  options: { forceSearch?: boolean } = {},
 ): () => void {
   const controller = new AbortController();
 
@@ -187,7 +196,7 @@ export function streamMessage(
       const response = await fetch(`/api/chat/conversations/${conversationId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, ...(options.forceSearch ? { forceSearch: true } : {}) }),
         credentials: 'same-origin',
         signal: controller.signal,
       });
@@ -230,6 +239,8 @@ export function streamMessage(
 
           if (event === 'chunk') {
             handlers.onChunk((payload as { text: string }).text);
+          } else if (event === 'status') {
+            handlers.onStatus?.((payload as { text: string }).text);
           } else if (event === 'done') {
             handlers.onDone(payload as Parameters<StreamHandlers['onDone']>[0]);
           } else if (event === 'error') {
@@ -539,3 +550,27 @@ export function streamSiteEdit(
 
   return () => controller.abort();
 }
+
+// ── البحث الحي ──
+
+export interface SearchStatus {
+  autoSearch: boolean;
+  provider: string;
+  searxngConfigured: boolean;
+}
+
+export interface PageContent {
+  url: string;
+  title: string;
+  text: string;
+  truncated: boolean;
+}
+
+export const searchApi = {
+  status: () => api.get<SearchStatus>('/search/status'),
+  run: (q: string, limit?: number) =>
+    api.get<{ query: string; results: SearchSource[]; provider: string }>(
+      `/search?q=${encodeURIComponent(q)}${limit ? `&limit=${limit}` : ''}`,
+    ),
+  page: (url: string) => api.get<PageContent>(`/search/page?url=${encodeURIComponent(url)}`),
+};

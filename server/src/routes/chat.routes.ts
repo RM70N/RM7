@@ -24,7 +24,11 @@ const idSchema = z.object({ id: z.string().min(1) });
 const createSchema = z.object({ title: z.string().max(200).optional() });
 const renameSchema = z.object({ title: z.string().min(1).max(200) });
 const pinSchema = z.object({ pinned: z.boolean() });
-const sendSchema = z.object({ text: z.string().min(1, 'اكتب رسالتك').max(50_000) });
+const sendSchema = z.object({
+  text: z.string().min(1, 'اكتب رسالتك').max(50_000),
+  /** يجبر البحث الحي حتى لو السؤال ما بان أنه يحتاجه */
+  forceSearch: z.boolean().optional(),
+});
 
 // ── حالة المحرك ──
 
@@ -108,7 +112,7 @@ router.post(
   '/conversations/:id/messages',
   asyncHandler(async (req, res) => {
     const { id } = idSchema.parse(req.params);
-    const { text } = sendSchema.parse(req.body);
+    const { text, forceSearch } = sendSchema.parse(req.body);
 
     await assertEngineReady();
 
@@ -141,6 +145,8 @@ router.post(
         text,
         signal: controller.signal,
         onChunk: (chunk) => send('chunk', { text: chunk }),
+        onStatus: (status) => send('status', { text: status }),
+        ...(forceSearch ? { forceSearch: true } : {}),
       });
 
       send('done', {
@@ -148,6 +154,7 @@ router.post(
         assistantMessage: result.assistantMessage,
         durationMs: result.durationMs,
         partial: result.partial,
+        sources: result.sources,
       });
     } catch (error) {
       logger.error('فشل توليد الرد', error);

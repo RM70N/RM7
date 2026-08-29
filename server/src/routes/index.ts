@@ -4,6 +4,7 @@ import chatRoutes from './chat.routes.js';
 import memoryRoutes from './memory.routes.js';
 import knowledgeRoutes from './knowledge.routes.js';
 import siteRoutes from './site.routes.js';
+import searchRoutes from './search.routes.js';
 
 const router = Router();
 
@@ -21,5 +22,6 @@ router.use('/chat', chatRoutes);
 router.use('/memory', memoryRoutes);
 router.use('/knowledge', knowledgeRoutes);
 router.use('/sites', siteRoutes);
+router.use('/search', searchRoutes);
 
 export default router;

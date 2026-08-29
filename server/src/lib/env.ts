@@ -44,6 +44,12 @@ const schema = z.object({
   /** عدد الخيوط (0 = تلقائي) */
   ENGINE_THREADS: z.coerce.number().int().min(0).default(0),
 
+  // --- البحث الحي ---
+  /** عنوان SearxNG مستضاف عندك (اختياري — وإلا نستخدم DuckDuckGo) */
+  SEARXNG_URL: z.string().optional().default(''),
+  /** بحث تلقائي لما السؤال يحتاج معلومة محدثة */
+  AUTO_SEARCH: booleanish.default('true'),
+
   // --- الذاكرة الدائمة ---
   /** استخراج الذكريات تلقائيًا بعد كل رد (يكلّف دورة توليد إضافية) */
   AUTO_MEMORY: booleanish.default('true'),
