@@ -22,8 +22,9 @@ APP_USER=ahsmaha
 REPO=https://github.com/RM70N/RM7.git
 BRANCH=claude/ahsmaha-ai-system-klji7f
 
-# النموذج: allam-7b (سعودي، 4.4 غيغا) — أو qwen3-4b للأجهزة الأضعف
-MODEL=allam-7b
+# النموذج: اتركه فاضي عشان يختار الأنسب لرام السيرفر تلقائيًا.
+# أو حدده يدويًا:  allam-7b · qwen3-8b · qwen3-4b · qwen3-1.7b · qwen3-0.6b
+MODEL=
 
 export DEBIAN_FRONTEND=noninteractive
 export NEEDRESTART_MODE=a
@@ -212,9 +213,27 @@ fi
 command -v ufw >/dev/null && { ufw allow 80/tcp; ufw allow 443/tcp; } 2>/dev/null || true
 
 # ── 8. أوزان المحرك ──
-echo "── ننزّل أوزان المحرك (${MODEL}) — هذي أطول خطوة ──"
-sudo -u "$APP_USER" bash -c "cd '$APP_DIR' && node server/dist/scripts/pull-model.js ${MODEL}" \
-  || echo "!! فشل تنزيل الأوزان — نزّلها لاحقًا بـ: npm run engine:pull"
+RAM_GB=$(free -g | awk '/^Mem:/{print $2}')
+echo "── رام السيرفر: ${RAM_GB} غيغا ──"
+
+if [ -z "$MODEL" ]; then
+  echo "── ننزّل الأوزان (النموذج يُختار تلقائيًا حسب الرام) — أطول خطوة ──"
+  sudo -u "$APP_USER" bash -c "cd '$APP_DIR' && node server/dist/scripts/pull-model.js" \
+    || echo "!! فشل تنزيل الأوزان — نزّلها لاحقًا بـ: npm run engine:pull"
+else
+  echo "── ننزّل الأوزان (${MODEL}) — أطول خطوة ──"
+  sudo -u "$APP_USER" bash -c "cd '$APP_DIR' && node server/dist/scripts/pull-model.js ${MODEL}" \
+    || echo "!! فشل تنزيل الأوزان — نزّلها لاحقًا بـ: npm run engine:pull"
+fi
+
+# على السيرفرات الصغيرة نضيّق نافذة السياق عشان ما تنفد الرام
+if [ "${RAM_GB:-0}" -le 4 ]; then
+  echo "── سيرفر صغير: نضبط الإعدادات لتناسب الرام ──"
+  sed -i 's/^ENGINE_CONTEXT_SIZE=.*/ENGINE_CONTEXT_SIZE=4096/' "$APP_DIR/.env"
+  sed -i 's/^ENGINE_MAX_TOKENS=.*/ENGINE_MAX_TOKENS=1024/' "$APP_DIR/.env"
+  # الاستخراج التلقائي للذاكرة يكلّف دورة توليد إضافية — نطفيه
+  sed -i 's/^AUTO_MEMORY=.*/AUTO_MEMORY=false/' "$APP_DIR/.env"
+fi
 
 systemctl restart ahsmaha
 

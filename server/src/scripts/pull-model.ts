@@ -3,14 +3,21 @@ import { mkdir, rename, stat, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
-import { MODEL_CATALOG, downloadUrl, findModel, type ModelEntry } from '../engine/catalog.js';
+import { totalmem } from 'node:os';
+import {
+  MODEL_CATALOG,
+  downloadUrl,
+  findModel,
+  recommendModel,
+  type ModelEntry,
+} from '../engine/catalog.js';
 import { modelsDir } from '../engine/runtime.js';
 
 /**
  * ينزّل أوزان محرك احسمها.
  *
- *   npm run engine:pull -w server              # النموذج المفضّل (ALLaM السعودي)
- *   npm run engine:pull -w server -- qwen3-4b  # نموذج محدد
+ *   npm run engine:pull -w server              # يختار الأنسب لرام جهازك
+ *   npm run engine:pull -w server -- allam-7b  # نموذج محدد
  *   npm run engine:pull -w server -- --list    # عرض المتاح
  *
  * يدعم استئناف التحميل إذا انقطع.
@@ -114,7 +121,17 @@ async function main(): Promise<void> {
     return;
   }
 
-  const requested = args[0] ?? MODEL_CATALOG[0]!.id;
+  const ramGb = totalmem() / 1024 ** 3;
+
+  let requested = args[0];
+  if (!requested) {
+    // بدون تحديد: نختار الأنسب للرام المتاحة
+    const picked = recommendModel(ramGb);
+    requested = picked.id;
+    out(`\nرام الجهاز: ${ramGb.toFixed(1)} غيغا — اخترنا لك: ${picked.label}`);
+    out('لو تبي نموذجًا ثانيًا، مرّر معرّفه بعد الأمر.');
+  }
+
   const entry = findModel(requested);
 
   if (!entry) {
@@ -122,6 +139,12 @@ async function main(): Promise<void> {
     printCatalog();
     process.exitCode = 1;
     return;
+  }
+
+  if (entry.minRamGb > ramGb + 0.5) {
+    out(`\nتحذير: ${entry.label} يحتاج ${entry.minRamGb} غيغا رام، وعندك ${ramGb.toFixed(1)} غيغا.`);
+    out('ممكن يشتغل بس ببطء شديد أو ينهار. الأفضل تختار نموذجًا أخف.');
+    out('');
   }
 
   try {

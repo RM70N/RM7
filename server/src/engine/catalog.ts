@@ -56,14 +56,46 @@ export const MODEL_CATALOG: ModelEntry[] = [
   {
     id: 'qwen3-4b',
     label: 'Qwen3 4B (خفيف)',
-    note: 'للأجهزة الضعيفة. أسرع بمرتين بس أقل ذكاءً.',
+    note: 'للسيرفرات المتوسطة. أسرع بمرتين من 8B بس أقل ذكاءً.',
     repo: 'Qwen/Qwen3-4B-GGUF',
     file: 'Qwen3-4B-Q4_K_M.gguf',
     sizeGb: 2.5,
     minRamGb: 6,
     saudi: 3,
   },
+  {
+    id: 'qwen3-1.7b',
+    label: 'Qwen3 1.7B (خفيف جدًا)',
+    note: 'يشتغل على سيرفر بـ 4 غيغا رام. مناسب للردود القصيرة والأسئلة البسيطة.',
+    repo: 'Qwen/Qwen3-1.7B-GGUF',
+    file: 'Qwen3-1.7B-Q4_K_M.gguf',
+    sizeGb: 1.1,
+    minRamGb: 4,
+    saudi: 2,
+  },
+  {
+    id: 'qwen3-0.6b',
+    label: 'Qwen3 0.6B (أصغر شي)',
+    note: 'آخر حل للسيرفرات الصغيرة جدًا (2 غيغا). ردوده بسيطة وأخطاؤه أكثر.',
+    repo: 'Qwen/Qwen3-0.6B-GGUF',
+    file: 'Qwen3-0.6B-Q4_K_M.gguf',
+    sizeGb: 0.5,
+    minRamGb: 2,
+    saudi: 1,
+  },
 ];
+
+/**
+ * يختار أنسب نموذج للرام المتاحة.
+ * نترك هامشًا لقاعدة البيانات والسيرفر ومحرك الرسم.
+ */
+export function recommendModel(availableRamGb: number): ModelEntry {
+  const fits = MODEL_CATALOG.filter((entry) => entry.minRamGb <= availableRamGb);
+  if (fits.length === 0) return MODEL_CATALOG[MODEL_CATALOG.length - 1]!;
+
+  // الأفضل = أعلى جودة لهجة، ثم أكبر حجم يدخل في الرام
+  return fits.sort((a, b) => b.saudi - a.saudi || b.sizeGb - a.sizeGb)[0]!;
+}
 
 export function findModel(id: string): ModelEntry | undefined {
   return MODEL_CATALOG.find((entry) => entry.id === id);
