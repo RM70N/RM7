@@ -1,8 +1,11 @@
+import { existsSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import express, { type Express } from 'express';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import { env } from './lib/env.js';
+import { env, REPO_ROOT } from './lib/env.js';
+import { logger } from './lib/logger.js';
 import routes from './routes/index.js';
 import v1Routes from './routes/v1.routes.js';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.js';
@@ -41,6 +44,30 @@ export function createApp(): Express {
   app.use('/api/v1', v1Routes);
 
   app.use('/api', routes);
+
+  // في الإنتاج نقدّم الواجهة المبنية من نفس الخدمة — خدمة وحدة ومنفذ واحد
+  const webDist = resolve(REPO_ROOT, 'web', 'dist');
+
+  if (existsSync(join(webDist, 'index.html'))) {
+    // الأصول لها بصمة في اسمها فنخزّنها طويلًا، وindex.html أبدًا
+    app.use(
+      express.static(webDist, {
+        index: false,
+        maxAge: '1y',
+        setHeaders: (res, filePath) => {
+          if (filePath.endsWith('index.html')) res.setHeader('Cache-Control', 'no-store');
+        },
+      }),
+    );
+
+    // أي مسار مو تحت /api يرجّع الواجهة (تطبيق صفحة واحدة)
+    app.get(/^\/(?!api\/).*/, (_req, res) => {
+      res.setHeader('Cache-Control', 'no-store');
+      res.sendFile(join(webDist, 'index.html'));
+    });
+
+    logger.info('نقدّم الواجهة المبنية من نفس الخدمة');
+  }
 
   app.use(notFoundHandler);
   app.use(errorHandler);

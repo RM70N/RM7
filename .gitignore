@@ -39,3 +39,6 @@ coverage/
 .cache/
 .turbo/
 .models/
+
+# حزمة النشر المبنية
+dist-package/

@@ -297,7 +297,22 @@ curl https://your-server/api/v1/chat \
 
 ## النشر
 
-خطوات التشغيل والإنتاج وnginx والنسخ الاحتياطي: [`docs/DEPLOY.md`](docs/DEPLOY.md)
+ابنِ حزمة جاهزة للرفع على أي VPS:
+
+```bash
+npm run package
+```
+
+تطلع `dist-package/ahsmaha-ai.zip` — ارفعها على السيرفر، فكّها، وشغّل
+`bash install.sh`. المثبّت يفحص المتطلبات ويولّد مفاتيح الحماية وباسورد
+الدخول ويجهّز قاعدة البيانات.
+
+في الإنتاج السيرفر يقدّم الواجهة بنفسه — **خدمة وحدة على منفذ واحد**.
+
+الحزمة تشمل: `install.sh` · `ahsmaha.service` لـ systemd · `nginx.conf`
+· دليل تثبيت عربي كامل.
+
+تفاصيل أكثر: [`docs/DEPLOY.md`](docs/DEPLOY.md)
 
 ## الخصوصية والأمان
 
