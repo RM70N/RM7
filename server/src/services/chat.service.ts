@@ -5,6 +5,14 @@ import { notFound, badRequest } from '../lib/errors.js';
 import { generate, type ChatTurn } from '../engine/inference.js';
 import type { PersonaContext } from '../engine/persona.js';
 import { IDENTITY } from '../engine/persona.js';
+import {
+  EXTRACTION_PROMPT,
+  memoriesForPrompt,
+  parseExtraction,
+  saveExtracted,
+} from './memory.service.js';
+import { logger } from '../lib/logger.js';
+import { env } from '../lib/env.js';
 
 /** أقصى عدد رسائل سابقة نرسلها للمحرك — نحمي نافذة السياق. */
 const HISTORY_LIMIT = 20;
@@ -144,6 +152,13 @@ export async function sendMessage(options: SendOptions): Promise<SendResult> {
   let streamed = '';
   const startedAt = Date.now();
 
+  // نحقن الذاكرة الدائمة الأنسب للرسالة الحالية
+  const memories = await memoriesForPrompt(options.text);
+  const context: PersonaContext = {
+    ...options.context,
+    ...(memories.length > 0 ? { memories } : {}),
+  };
+
   let result: Awaited<ReturnType<typeof generate>> | null = null;
   let failure: unknown = null;
 
@@ -151,7 +166,7 @@ export async function sendMessage(options: SendOptions): Promise<SendResult> {
     result = await generate({
       prompt: options.text,
       history,
-      context: options.context,
+      context,
       signal: options.signal,
       onChunk: (chunk) => {
         streamed += chunk;
@@ -204,10 +219,56 @@ export async function sendMessage(options: SendOptions): Promise<SendResult> {
     },
   });
 
+  // الاستخراج يشتغل في الخلفية — ما نخلّي المستخدم ينتظره.
+  // نتجاوزه للرسائل القصيرة (شكرًا، تمام…) لأنها ما تحمل معلومات دائمة.
+  if (
+    env.AUTO_MEMORY &&
+    finalText &&
+    !failure &&
+    options.text.trim().length >= env.AUTO_MEMORY_MIN_CHARS
+  ) {
+    void extractMemories(options.text, finalText, assistantMessage.id);
+  }
+
   return {
     userMessage: toPlain(userMessage),
     assistantMessage: toPlain(assistantMessage),
     durationMs: result?.durationMs ?? Date.now() - startedAt,
     partial: Boolean(failure) || (result?.stopped ?? false),
   };
+}
+
+/**
+ * يستخرج الذكريات الدائمة من تبادل واحد، على نفس المحرك المحلي.
+ * يشتغل في الخلفية وما يرمي أخطاء — فشله ما يأثر على المحادثة.
+ */
+async function extractMemories(
+  userText: string,
+  assistantText: string,
+  messageId: string,
+): Promise<void> {
+  try {
+    const conversation = [
+      `المستخدم: ${userText}`,
+      `المساعد: ${assistantText.slice(0, 2000)}`,
+    ].join('\n\n');
+
+    const result = await generate({
+      prompt: `${EXTRACTION_PROMPT}\n\n---\n\n${conversation}`,
+      // بدون شخصية ولا تاريخ — مهمة استخراج بحتة
+      context: {},
+      temperature: 0.1,
+      maxTokens: 600,
+    });
+
+    const extracted = parseExtraction(result.text);
+    if (extracted.length > 0) {
+      const saved = await saveExtracted(extracted, messageId);
+      if (saved.length > 0) {
+        logger.info(`الذاكرة: حفظنا ${saved.length} معلومة جديدة`);
+      }
+    }
+  } catch (error) {
+    logger.debug('تعذّر استخراج الذاكرة', error);
+  }
 }

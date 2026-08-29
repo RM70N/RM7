@@ -243,3 +243,57 @@ export function streamMessage(
 
   return () => controller.abort();
 }
+
+// ── الذاكرة الدائمة ──
+
+export type MemoryCategory = 'personal' | 'preference' | 'project' | 'fact' | 'instruction';
+
+export interface MemoryItem {
+  id: string;
+  title: string;
+  content: string;
+  category: MemoryCategory;
+  importance: number;
+  pinned: boolean;
+  source: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MemoryStats {
+  total: number;
+  pinned: number;
+  auto: number;
+  manual: number;
+  byCategory: Record<string, number>;
+}
+
+export interface MemoryListResponse {
+  memories: MemoryItem[];
+  stats: MemoryStats;
+  labels: Record<MemoryCategory, string>;
+}
+
+export interface MemoryDraft {
+  title: string;
+  content: string;
+  category?: MemoryCategory;
+  importance?: number;
+  pinned?: boolean;
+}
+
+export const memoryApi = {
+  list: (params?: { category?: MemoryCategory; search?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.category) query.set('category', params.category);
+    if (params?.search) query.set('search', params.search);
+    const suffix = query.toString();
+    return api.get<MemoryListResponse>(`/memory${suffix ? `?${suffix}` : ''}`);
+  },
+  create: (draft: MemoryDraft) => api.post<MemoryItem>('/memory', draft),
+  update: (id: string, draft: Partial<MemoryDraft>) =>
+    api.patch<MemoryItem>(`/memory/${id}`, draft),
+  remove: (id: string) => api.delete<void>(`/memory/${id}`),
+  clear: (source?: 'auto' | 'manual') =>
+    api.post<{ ok: true; removed: number }>('/memory/clear', { source }),
+};

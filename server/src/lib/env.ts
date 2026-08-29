@@ -44,6 +44,12 @@ const schema = z.object({
   /** عدد الخيوط (0 = تلقائي) */
   ENGINE_THREADS: z.coerce.number().int().min(0).default(0),
 
+  // --- الذاكرة الدائمة ---
+  /** استخراج الذكريات تلقائيًا بعد كل رد (يكلّف دورة توليد إضافية) */
+  AUTO_MEMORY: booleanish.default('true'),
+  /** أقل طول رسالة يستاهل الاستخراج */
+  AUTO_MEMORY_MIN_CHARS: z.coerce.number().int().positive().default(15),
+
   STORAGE_DIR: z.string().default('./storage'),
   MAX_UPLOAD_MB: z.coerce.number().int().positive().default(100),
 
