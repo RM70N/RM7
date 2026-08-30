@@ -6,6 +6,7 @@
 # استضافة ولا بطاقة بنكية — الجوال نفسه هو السيرفر.
 #
 # التشغيل:
+#   curl -fsSL https://raw.githubusercontent.com/RM70N/RM7/main/deploy/termux.sh -o termux.sh
 #   bash termux.sh
 #
 set -euo pipefail
@@ -67,9 +68,16 @@ warn "pgvector مو متاح على أندرويد — الاسترجاع بيع
 step "نجيب احسمها…"
 
 REPO="${AHSMAHA_REPO:-https://github.com/RM70N/RM7.git}"
-# الكود على فرع التطوير مو على main — لازم نحدّده صراحةً،
-# وإلا نجيب فرعًا فاضيًا وما نلقى ولا ملف.
+# نحدّد الفرع صراحةً عشان الاستنساخ ما يعتمد على الفرع الافتراضي.
 BRANCH="${AHSMAHA_BRANCH:-main}"
+
+# مجلد موجود من محاولة سابقة فاشلة (مو مستودع git) يخلي الاستنساخ
+# يفشل. ننحّيه جنبًا بدل ما نحذفه — لو فيه شي للمستخدم يظل موجودًا.
+if [ -d "$APP_DIR" ] && [ ! -d "$APP_DIR/.git" ]; then
+  BACKUP="$APP_DIR.old.$(date +%s)"
+  mv "$APP_DIR" "$BACKUP"
+  warn "لقينا مجلدًا قديمًا — نقلناه لـ $BACKUP"
+fi
 
 if [ -d "$APP_DIR/.git" ]; then
   git -C "$APP_DIR" fetch --depth 1 origin "$BRANCH" \
