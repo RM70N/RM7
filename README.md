@@ -332,7 +332,7 @@ bash deploy/tunnel.sh        # نافذة ثانية
 ولا استضافة ولا بطاقة بنكية:
 
 ```bash
-pkg install -y git && git clone --depth 1 https://github.com/RM70N/RM7.git ~/ahsmaha && bash ~/ahsmaha/deploy/termux.sh
+pkg install -y git && git clone --depth 1 -b claude/ahsmaha-ai-system-klji7f https://github.com/RM70N/RM7.git ~/ahsmaha && bash ~/ahsmaha/deploy/termux.sh
 ```
 
 المحادثة والذاكرة والمهارات والملفات والمواقع والبحث كلها تشتغل.

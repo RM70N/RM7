@@ -65,15 +65,28 @@ warn "pgvector مو متاح على أندرويد — الاسترجاع بيع
 
 # ── 3. الكود ──
 step "نجيب احسمها…"
+
+REPO="${AHSMAHA_REPO:-https://github.com/RM70N/RM7.git}"
+# الكود على فرع التطوير مو على main — لازم نحدّده صراحةً،
+# وإلا نجيب فرعًا فاضيًا وما نلقى ولا ملف.
+BRANCH="${AHSMAHA_BRANCH:-claude/ahsmaha-ai-system-klji7f}"
+
 if [ -d "$APP_DIR/.git" ]; then
-  git -C "$APP_DIR" pull --ff-only >/dev/null 2>&1 || true
+  git -C "$APP_DIR" fetch --depth 1 origin "$BRANCH" \
+    || die "ما قدرنا نحدّث الكود. تأكد من الإنترنت."
+  git -C "$APP_DIR" checkout -B "$BRANCH" FETCH_HEAD >/dev/null 2>&1 \
+    || die "ما قدرنا نبدّل للفرع $BRANCH"
   ok "حدّثنا النسخة الموجودة"
 else
-  git clone --depth 1 "${AHSMAHA_REPO:-https://github.com/RM70N/RM7.git}" "$APP_DIR" >/dev/null 2>&1 \
-    || die "ما قدرنا نجيب الكود. تأكد من الإنترنت."
+  git clone --depth 1 --branch "$BRANCH" "$REPO" "$APP_DIR" \
+    || die "ما قدرنا نجيب الكود. تأكد من الإنترنت ومن اسم الفرع."
   ok "جبنا الكود"
 fi
 cd "$APP_DIR"
+
+# نتأكد أن الملفات وصلت فعلًا — الفرع الفاضي يعطي مجلدًا بلا شي
+[ -f package.json ] || die "الكود ناقص — ما فيه package.json. جرّب: rm -rf $APP_DIR ثم أعد التشغيل."
+ok "الملفات كاملة"
 
 # ── 4. الإعدادات ──
 step "نضبط الإعدادات…"
