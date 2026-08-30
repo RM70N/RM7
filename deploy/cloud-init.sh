@@ -20,7 +20,7 @@ echo "═══ بدأ تثبيت احسمها AI — $(date) ═══"
 APP_DIR=/srv/ahsmaha
 APP_USER=ahsmaha
 REPO=https://github.com/RM70N/RM7.git
-BRANCH=claude/ahsmaha-ai-system-klji7f
+BRANCH=main
 
 # النموذج: اتركه فاضي عشان يختار الأنسب لرام السيرفر تلقائيًا.
 # أو حدده يدويًا:  allam-7b · qwen3-8b · qwen3-4b · qwen3-1.7b · qwen3-0.6b

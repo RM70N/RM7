@@ -69,7 +69,7 @@ step "نجيب احسمها…"
 REPO="${AHSMAHA_REPO:-https://github.com/RM70N/RM7.git}"
 # الكود على فرع التطوير مو على main — لازم نحدّده صراحةً،
 # وإلا نجيب فرعًا فاضيًا وما نلقى ولا ملف.
-BRANCH="${AHSMAHA_BRANCH:-claude/ahsmaha-ai-system-klji7f}"
+BRANCH="${AHSMAHA_BRANCH:-main}"
 
 if [ -d "$APP_DIR/.git" ]; then
   git -C "$APP_DIR" fetch --depth 1 origin "$BRANCH" \
