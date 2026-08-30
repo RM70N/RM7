@@ -6,8 +6,8 @@
 # استضافة ولا بطاقة بنكية — الجوال نفسه هو السيرفر.
 #
 # التشغيل:
-#   curl -fsSL https://raw.githubusercontent.com/RM70N/RM7/main/deploy/termux.sh -o termux.sh
-#   bash termux.sh
+#   git clone --depth 1 https://github.com/RM70N/RM7.git ~/.ahsmaha-boot
+#   bash ~/.ahsmaha-boot/deploy/termux.sh
 #
 set -euo pipefail
 
@@ -187,6 +187,9 @@ sleep 2
 cd "$HOME/ahsmaha" && npm start
 START
 chmod +x "$HOME/ahsmaha-start.sh"
+
+# مجلد الإقلاع اللي جبنا منه هذا السكربت ما عاد له لزوم
+rm -rf "$HOME/.ahsmaha-boot"
 
 step "خلصنا"
 echo "  شغّل احسمها:   ${BOLD}bash ~/ahsmaha-start.sh${OFF}"
