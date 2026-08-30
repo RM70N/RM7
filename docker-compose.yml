@@ -1,0 +1,21 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: ahsmaha-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ahsmaha
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ahsmaha_local_dev}
+      POSTGRES_DB: ahsmaha
+    ports:
+      - "5432:5432"
+    volumes:
+      - ahsmaha_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ahsmaha -d ahsmaha"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  ahsmaha_pgdata:

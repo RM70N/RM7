@@ -1,0 +1,352 @@
+// احسمها AI — مخطط قاعدة البيانات
+// PostgreSQL + pgvector. كل شيء دائم، لا شيء يضيع عند إعادة التشغيل.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+// ───────────────────────── الهوية والجلسات ─────────────────────────
+
+/// المالك الوحيد للنظام. صف واحد فقط — لا يوجد تسجيل حسابات جديدة.
+model Owner {
+  id             String    @id @default(cuid())
+  passwordHash   String
+  displayName    String    @default("المالك")
+  failedAttempts Int       @default(0)
+  lockedUntil    DateTime?
+  lastLoginAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  sessions Session[]
+
+  @@map("owners")
+}
+
+/// جلسة دخول فعّالة. يُخزَّن هاش الرمز فقط، لا الرمز نفسه.
+model Session {
+  id        String    @id @default(cuid())
+  ownerId   String
+  tokenHash String    @unique
+  userAgent String?
+  ipHash    String?
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  lastSeenAt DateTime @default(now())
+
+  owner Owner @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+/// مفاتيح API الخاصة بـ احسمها AI (يصدرها المالك للاستخدام الخارجي).
+model ApiKey {
+  id         String    @id @default(cuid())
+  name       String
+  prefix     String    @unique
+  keyHash    String
+  scopes     String[]  @default([])
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@map("api_keys")
+}
+
+// ───────────────────────── المحادثات ─────────────────────────
+
+model Conversation {
+  id        String    @id @default(cuid())
+  title     String    @default("محادثة جديدة")
+  pinned    Boolean   @default(false)
+  archived  Boolean   @default(false)
+  siteId    String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  messages Message[]
+  site     SiteProject? @relation(fields: [siteId], references: [id], onDelete: SetNull)
+
+  @@index([updatedAt])
+  @@index([archived, pinned])
+  @@map("conversations")
+}
+
+enum MessageRole {
+  user
+  assistant
+  system
+}
+
+model Message {
+  id             String      @id @default(cuid())
+  conversationId String
+  role           MessageRole
+  /// نص مشفّر AES-256-GCM
+  content        String
+  model          String?
+  inputTokens    Int?
+  outputTokens   Int?
+  /// أدوات مستخدمة، مصادر بحث، مراجع معرفة … إلخ
+  meta           Json?
+  createdAt      DateTime    @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  attachments  Attachment[]
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+enum AttachmentKind {
+  image
+  document
+  archive
+  other
+}
+
+model Attachment {
+  id        String         @id @default(cuid())
+  messageId String?
+  kind      AttachmentKind
+  filename  String
+  mime      String
+  size      Int
+  /// مسار نسبي داخل مجلد التخزين، المحتوى مشفّر على القرص
+  path      String
+  createdAt DateTime       @default(now())
+
+  message Message? @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("attachments")
+}
+
+// ───────────────────────── الذاكرة الدائمة ─────────────────────────
+
+enum MemoryCategory {
+  personal
+  preference
+  project
+  fact
+  instruction
+}
+
+model Memory {
+  id         String         @id @default(cuid())
+  title      String
+  content    String
+  category   MemoryCategory @default(fact)
+  importance Int            @default(3)
+  /// من أين جاءت: manual | auto | import
+  source     String         @default("manual")
+  sourceRef  String?
+  pinned     Boolean        @default(false)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@index([category])
+  @@index([updatedAt])
+  @@map("memories")
+}
+
+// ───────────────────────── المهارات وقاعدة المعرفة ─────────────────────────
+
+model Skill {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @default("")
+  content     String
+  tags        String[] @default([])
+  enabled     Boolean  @default(true)
+  /// دائمًا في السياق (بدل الاسترجاع عند الحاجة فقط)
+  alwaysOn    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  chunks Chunk[]
+
+  @@index([enabled])
+  @@map("skills")
+}
+
+enum DocumentStatus {
+  pending
+  processing
+  ready
+  failed
+}
+
+model Document {
+  id         String         @id @default(cuid())
+  filename   String
+  mime       String
+  size       Int
+  path       String
+  status     DocumentStatus @default(pending)
+  /// نص مستخرج مختصر للعرض السريع
+  preview    String?
+  textLength Int            @default(0)
+  pageCount  Int?
+  error      String?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  chunks Chunk[]
+
+  @@index([status])
+  @@map("documents")
+}
+
+/// مقاطع نصية مفهرسة دلاليًا للاسترجاع (RAG).
+model Chunk {
+  id         String   @id @default(cuid())
+  documentId String?
+  skillId    String?
+  ordinal    Int      @default(0)
+  content    String
+  tokens     Int      @default(0)
+  meta       Json?
+  createdAt  DateTime @default(now())
+
+  /// متجه التضمين — بدون أبعاد ثابتة عشان يشتغل مع أي نموذج تضمين.
+  /// يُقرأ ويُكتب عبر استعلامات SQL خام، والأبعاد محفوظة في dim.
+  embedding Unsupported("vector")?
+
+  /// أبعاد المتجه — نستخدمها لتجاهل المقاطع المفهرسة بنموذج مختلف
+  dim Int?
+
+  document Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  skill    Skill?    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([skillId])
+  @@index([dim])
+  @@map("chunks")
+}
+
+// ───────────────────────── مشاريع المواقع المرفوعة ─────────────────────────
+
+enum SiteStatus {
+  importing
+  ready
+  failed
+}
+
+model SiteProject {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  description String     @default("")
+  /// مسار نسبي داخل مجلد التخزين
+  rootPath    String
+  status      SiteStatus @default(importing)
+  fileCount   Int        @default(0)
+  totalBytes  BigInt     @default(0)
+  entryFile   String?
+  error       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  files         SiteFile[]
+  revisions     SiteRevision[]
+  conversations Conversation[]
+
+  @@map("site_projects")
+}
+
+model SiteFile {
+  id        String   @id @default(cuid())
+  projectId String
+  relPath   String
+  mime      String
+  size      Int
+  hash      String
+  isText    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project SiteProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, relPath])
+  @@index([projectId])
+  @@map("site_files")
+}
+
+/// لقطة قابلة للرجوع لكل تعديل يقوم به المساعد على الموقع.
+model SiteRevision {
+  id        String   @id @default(cuid())
+  projectId String
+  summary   String
+  /// [{ relPath, action, before, after }]
+  changes   Json
+  /// نسخة احتياطية كاملة قبل التعديل (مسار نسبي)
+  backupPath String?
+  createdAt DateTime @default(now())
+
+  project SiteProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+  @@map("site_revisions")
+}
+
+// ───────────────────────── الاستوديو البصري ─────────────────────────
+
+enum MediaKind {
+  image
+  video
+  motion
+}
+
+enum MediaStatus {
+  queued
+  rendering
+  ready
+  failed
+}
+
+model MediaAsset {
+  id         String      @id @default(cuid())
+  kind       MediaKind
+  title      String      @default("")
+  prompt     String      @default("")
+  /// إعدادات التوليد (أبعاد، ألوان، مدة، قالب …)
+  spec       Json?
+  status     MediaStatus @default(queued)
+  path       String?
+  thumbPath  String?
+  mime       String?
+  width      Int?
+  height     Int?
+  durationMs Int?
+  sizeBytes  Int?
+  error      String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@index([kind, createdAt])
+  @@map("media_assets")
+}
+
+// ───────────────────────── سجل التدقيق ─────────────────────────
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  detail    Json?
+  ipHash    String?
+  createdAt DateTime @default(now())
+
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}

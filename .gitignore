@@ -1,0 +1,44 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# build output
+dist/
+build/
+*.tsbuildinfo
+
+# environment & secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# runtime storage (uploads, generated media, extracted sites)
+storage/
+!storage/.gitkeep
+
+# logs
+logs/
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# editors & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# test & coverage
+coverage/
+.nyc_output/
+
+# caches
+.cache/
+.turbo/
+.models/
+
+# حزمة النشر المبنية
+dist-package/

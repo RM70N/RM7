@@ -1,0 +1,43 @@
+# خدمة systemd لاحسمها AI
+#
+# التركيب:
+#   sudo cp ahsmaha.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now ahsmaha
+
+[Unit]
+Description=Ahsmaha AI
+Documentation=file:///srv/ahsmaha/README.md
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ahsmaha
+Group=ahsmaha
+WorkingDirectory=/srv/ahsmaha
+ExecStart=/usr/bin/node server/dist/index.js
+Restart=always
+RestartSec=5
+
+Environment=NODE_ENV=production
+
+# الرندر يأخذ وقتًا — ما نبي الخدمة تنقتل وهي شغالة
+TimeoutStopSec=60
+
+# تشديد أمني
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/ahsmaha/storage /srv/ahsmaha/.models
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ahsmaha
+
+[Install]
+WantedBy=multi-user.target

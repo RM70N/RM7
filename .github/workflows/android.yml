@@ -1,0 +1,86 @@
+# يبني تطبيق احسمها AI للأندرويد وينشر ملف APK جاهز للتحميل.
+#
+# التشغيل:
+#   • تلقائيًا مع أي تعديل على مجلد android/
+#   • أو يدويًا من تبويب Actions ← Run workflow
+#
+# بعد ما يخلص، حمّل الـ APK من:
+#   • تبويب Actions ← آخر تشغيل ← Artifacts
+#   • أو من صفحة Releases (لما تشغّله يدويًا)
+
+name: بناء تطبيق أندرويد
+
+on:
+  push:
+    paths:
+      - 'android/**'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 'ينشر الـ APK في صفحة Releases'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: جلب الكود
+        uses: actions/checkout@v4
+
+      - name: تجهيز Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: تجهيز Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: بناء APK
+        working-directory: android
+        run: |
+          chmod +x gradlew || true
+          gradle wrapper --gradle-version 8.11.1
+          ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: تسمية الملف
+        id: apk
+        run: |
+          SRC=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
+          NAME="ahsmaha-ai-v${GITHUB_RUN_NUMBER}.apk"
+          cp "$SRC" "$NAME"
+          echo "path=$NAME" >> "$GITHUB_OUTPUT"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          ls -lh "$NAME"
+
+      - name: رفع الملف كمخرَج
+        uses: actions/upload-artifact@v4
+        with:
+          name: ahsmaha-ai-apk
+          path: ${{ steps.apk.outputs.path }}
+          retention-days: 90
+
+      - name: نشر في Releases
+        if: github.event_name == 'workflow_dispatch' && inputs.release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: app-v${{ github.run_number }}
+          name: احسمها AI — إصدار ${{ github.run_number }}
+          body: |
+            تطبيق احسمها AI للأندرويد.
+
+            **التحميل:** نزّل الملف تحت وافتحه من جوالك.
+
+            أول ما تفتحه بيطلب عنوان سيرفرك — اكتبه واضغط "اربطني".
+
+            > التطبيق واجهة لسيرفر احسمها حقك. لازم يكون السيرفر شغّالًا.
+            > الأندرويد بيحذّرك أن المصدر غير معروف — هذا طبيعي لأي تطبيق
+            > خارج المتجر. اسمح بالتثبيت وكمّل.
+          files: ${{ steps.apk.outputs.path }}
+          draft: false

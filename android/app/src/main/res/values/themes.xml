@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Ahsmaha" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/brand</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="android:colorBackground">@color/background</item>
+        <item name="android:statusBarColor">@color/background</item>
+        <item name="android:navigationBarColor">@color/background</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <!-- شاشة البداية: شعارك على الخلفية الداكنة -->
+    <style name="Theme.Ahsmaha.Splash" parent="Theme.Ahsmaha">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+    </style>
+</resources>
