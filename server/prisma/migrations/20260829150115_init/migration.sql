@@ -1,5 +1,11 @@
 -- CreateExtension
-CREATE EXTENSION IF NOT EXISTS "vector";
+-- pgvector اختياري: على الأجهزة اللي ما تقدر تركّبه (الجوال مثلًا)
+-- يكمل التثبيت عادي، والاسترجاع يشتغل بالكلمات المفتاحية.
+DO $$ BEGIN
+  CREATE EXTENSION IF NOT EXISTS "vector";
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'pgvector مو متاح — البحث الدلالي بينطفي والكلمات المفتاحية بتغطي.';
+END $$;
 
 -- CreateEnum
 CREATE TYPE "MessageRole" AS ENUM ('user', 'assistant', 'system');
@@ -166,7 +172,6 @@ CREATE TABLE "chunks" (
     "tokens" INTEGER NOT NULL DEFAULT 0,
     "meta" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "embedding" vector(384),
 
     CONSTRAINT "chunks_pkey" PRIMARY KEY ("id")
 );
@@ -332,3 +337,11 @@ ALTER TABLE "site_files" ADD CONSTRAINT "site_files_projectId_fkey" FOREIGN KEY 
 
 -- AddForeignKey
 ALTER TABLE "site_revisions" ADD CONSTRAINT "site_revisions_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "site_projects"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+
+-- عمود المتجه يُضاف فقط لو pgvector متاح
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector') THEN
+    ALTER TABLE "chunks" ADD COLUMN "embedding" vector;
+  END IF;
+END $$;

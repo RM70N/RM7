@@ -462,7 +462,14 @@ export const siteApi = {
   revert: (id: string, revisionId: string) =>
     api.post<{ ok: true }>(`/sites/${id}/revert/${revisionId}`),
   downloadUrl: (id: string) => `/api/sites/${id}/download`,
-  previewUrl: (id: string) => `/api/sites/${id}/preview/`,
+
+  /**
+   * المعاينة تشتغل في إطار معزول ما يوصله كوكي الجلسة، فنطلب رمزًا
+   * موقّعًا ونحطّه في المسار — وملفات الموقع ترثه تلقائيًا.
+   */
+  previewToken: (id: string) =>
+    api.post<{ token: string; expiresIn: number }>(`/sites/${id}/preview-token`),
+  previewUrl: (id: string, token: string) => `/api/sites/${id}/preview/${token}/`,
 
   upload: async (file: File, name?: string) => {
     const form = new FormData();

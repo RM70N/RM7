@@ -24,7 +24,7 @@ cp web/package.json "$PKG/web/"
 
 cp package.json package-lock.json .env.example docker-compose.yml README.md .nvmrc "$PKG/"
 cp -r docs "$PKG/docs"
-cp deploy/install.sh deploy/ahsmaha.service deploy/nginx.conf "$PKG/"
+cp deploy/install.sh deploy/termux.sh deploy/ahsmaha.service deploy/nginx.conf "$PKG/"
 cp deploy/INSTALL.md "$PKG/ابدأ-من-هنا.md"
 
 mkdir -p "$PKG/storage"/{uploads,sites,generated,tmp} "$PKG/.models"

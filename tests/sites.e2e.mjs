@@ -30,6 +30,22 @@ const browser = await chromium.launch(
   process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {},
 );
 const page = await browser.newPage({ viewport: { width: 1400, height: 950 } });
+
+// نراقب ملفات المعاينة: الإطار المعزول أصله معتم، فلو رجعنا لكوكي
+// الجلسة بدل رمز المعاينة تنحجب ملفات الموقع ويطلع التنسيق مكسورًا.
+const previewAssets = [];
+page.on('response', (r) => {
+  if (r.url().includes('/preview/')) previewAssets.push({ url: r.url(), status: r.status() });
+});
+const previewFailures = [];
+page.on('requestfailed', (r) => {
+  const reason = r.failure()?.errorText ?? '';
+  // ERR_ABORTED طبيعي: الإطار ينستبدل بعد كل تعديل فينقطع تحميله.
+  // اللي يهمنا الحجب الفعلي (ORB/CORS) اللي يكسر ملفات الموقع.
+  if (r.url().includes('/preview/') && !reason.includes('ERR_ABORTED')) {
+    previewFailures.push(`${r.url()} — ${reason}`);
+  }
+});
 page.on('console', (m) => { if (m.type()==='error'||m.type()==='warning') problems.push(`[${m.type()}] ${m.text()}`); });
 page.on('pageerror', (e) => problems.push(`[pageerror] ${e.message}`));
 
@@ -71,6 +87,18 @@ const frame = page.frameLocator('iframe[title="معاينة الموقع"]');
 await frame.locator('#title').waitFor({ timeout: 15000 });
 const previewText = await frame.locator('#title').textContent();
 step('الموقع يظهر داخل المعاينة', previewText?.includes('مرحبا'), previewText);
+
+const css = previewAssets.find((a) => a.url.includes('main.css'));
+step(
+  'ملف CSS يتحمّل داخل المعاينة',
+  css?.status === 200,
+  css ? `HTTP ${css.status}` : '(ما انطلب أصلًا)',
+);
+step(
+  'ما فيه ملف معاينة محجوب',
+  previewFailures.length === 0,
+  previewFailures.join(' | ') || 'صفر',
+);
 
 // الملفات
 await page.click('button:has-text("الملفات")');

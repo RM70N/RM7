@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import type { Response } from 'express';
 import { z } from 'zod';
 import { asyncHandler } from '../middleware/error.middleware.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
@@ -20,9 +21,54 @@ import {
   revertRevision,
 } from '../services/site.service.js';
 import { buildDiff, diffStats, editSite } from '../services/site-agent.service.js';
+import {
+  PREVIEW_TOKEN_TTL_SEC,
+  createPreviewToken,
+  verifyPreviewToken,
+} from '../lib/preview-token.js';
 
 const router = Router();
+
+/**
+ * المعاينة تتصادق برمز موقّع في المسار، مو بكوكي الجلسة، فلازم
+ * تنسجّل قبل requireAuth. تفاصيل السبب في lib/preview-token.ts.
+ */
+router.get(
+  '/:id/preview/:token/*',
+  asyncHandler(async (req, res) => {
+    const { id } = idSchema.parse(req.params);
+    const { token } = z.object({ token: z.string().min(1).max(200) }).parse(req.params);
+
+    if (!verifyPreviewToken(token, id)) {
+      throw new AppError(403, 'PREVIEW_EXPIRED', 'انتهت صلاحية المعاينة — حدّث الصفحة');
+    }
+
+    const requested = (req.params as unknown as { 0?: string })[0] ?? '';
+    const project = await getProject(id);
+    const relPath = requested === '' ? (project.entryFile ?? 'index.html') : requested;
+
+    try {
+      const { content, mime } = await readProjectFile(id, relPath);
+      setPreviewHeaders(res, mime);
+      res.setHeader('Content-Type', mime);
+      res.send(content);
+    } catch {
+      previewNotFound(res, relPath);
+    }
+  }),
+);
+
 router.use(requireAuth);
+
+/** الواجهة تطلب رمز معاينة قبل ما تفتح الإطار. */
+router.post(
+  '/:id/preview-token',
+  asyncHandler(async (req, res) => {
+    const { id } = idSchema.parse(req.params);
+    await getProject(id); // يتأكد أن المشروع موجود قبل ما نوقّع له رمزًا
+    res.json({ token: createPreviewToken(id), expiresIn: PREVIEW_TOKEN_TTL_SEC });
+  }),
+);
 
 const idSchema = z.object({ id: z.string().min(1) });
 const pathSchema = z.object({ path: z.string().min(1).max(500) });
@@ -267,32 +313,31 @@ router.get(
  */
 const PREVIEW_SANDBOX =
   'sandbox allow-scripts allow-forms allow-popups allow-modals allow-pointer-lock';
-router.get(
-  '/:id/preview/*',
-  asyncHandler(async (req, res) => {
-    const { id } = idSchema.parse(req.params);
-    const requested = (req.params as unknown as { 0?: string })[0] ?? '';
-    const project = await getProject(id);
 
-    const relPath = requested === '' ? (project.entryFile ?? 'index.html') : requested;
+/**
+ * ترويسات المعاينة.
+ *
+ * توجيه sandbox ينطبق على المستندات بس، فنحطّه على HTML فقط.
+ * وCORP نخليها cross-origin لأن الإطار المعزول أصله معتم، فطلباته
+ * لملفاته تُحسب عابرة للأصول وترفضها same-site الافتراضية.
+ */
+function setPreviewHeaders(res: Response, mime: string): void {
+  if (mime.startsWith('text/html')) {
+    res.setHeader('Content-Security-Policy', PREVIEW_SANDBOX);
+  }
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+}
 
-    try {
-      const { content, mime } = await readProjectFile(id, relPath);
-      res.setHeader('Content-Type', mime);
-      res.setHeader('Content-Security-Policy', PREVIEW_SANDBOX);
-      res.setHeader('Cache-Control', 'no-store');
-      res.setHeader('X-Content-Type-Options', 'nosniff');
-      res.send(content);
-    } catch {
-      res.setHeader('Content-Security-Policy', PREVIEW_SANDBOX);
-      res.status(404).type('text/html; charset=utf-8').send(
-        `<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8">
-         <body style="font-family:system-ui;padding:2rem;background:#15171f;color:#eceef2">
-         <h1>ما لقينا الملف</h1><p>${escapeHtml(relPath)}</p></body></html>`,
-      );
-    }
-  }),
-);
+function previewNotFound(res: Response, relPath: string): void {
+  setPreviewHeaders(res, 'text/html');
+  res.status(404).type('text/html; charset=utf-8').send(
+    `<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8">
+     <body style="font-family:system-ui;padding:2rem;background:#15171f;color:#eceef2">
+     <h1>ما لقينا الملف</h1><p>${escapeHtml(relPath)}</p></body></html>`,
+  );
+}
 
 function escapeHtml(value: string): string {
   return value

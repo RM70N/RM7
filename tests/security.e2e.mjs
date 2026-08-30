@@ -71,13 +71,37 @@ const upload = await page.request.post(`${API}/api/sites`, {
 });
 const projectId = (await upload.json()).project.id;
 
+// المعاينة تحتاج رمزًا موقّعًا — الكوكي ما يوصل للإطار المعزول
+const tokenRes = await page.request.post(`${API}/api/sites/${projectId}/preview-token`);
+const previewToken = (await tokenRes.json()).token;
+const previewUrl = `${API}/api/sites/${projectId}/preview/${previewToken}/`;
+
+step('طلب رمز المعاينة ينجح', typeof previewToken === 'string' && previewToken.length > 0);
+
+// المعاينة بدون رمز ما تخدم أي محتوى — المسار نفسه ما هو موجود
+const noToken = await page.request.get(`${API}/api/sites/${projectId}/preview/`, {
+  failOnStatusCode: false,
+});
+step(
+  'المعاينة بدون رمز ما تخدم محتوى',
+  noToken.status() >= 400,
+  `HTTP ${noToken.status()}`,
+);
+
+// رمز مزوّر مرفوض
+const badToken = await page.request.get(
+  `${API}/api/sites/${projectId}/preview/${Date.now() + 60000}.AAAA/`,
+  { failOnStatusCode: false },
+);
+step('رمز معاينة مزوّر مرفوض', badToken.status() === 403, `HTTP ${badToken.status()}`);
+
 // الترويسة موجودة
-const head = await page.request.get(`${API}/api/sites/${projectId}/preview/`);
+const head = await page.request.get(previewUrl);
 const csp = head.headers()['content-security-policy'] ?? '';
 step('المعاينة ترسل CSP sandbox', csp.includes('sandbox'), csp || '(غائبة)');
 
 // الاختبار الحاسم: فتح المعاينة كتبويب رئيسي — بدون أي حماية من iframe
-await page.goto(`${API}/api/sites/${projectId}/preview/`, { waitUntil: 'load' });
+await page.goto(previewUrl, { waitUntil: 'load' });
 await page.waitForFunction(
   () => document.getElementById('out')?.dataset.stolen !== 'pending',
   { timeout: 15000 },

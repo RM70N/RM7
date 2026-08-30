@@ -6,6 +6,7 @@ import { badRequest, notFound } from '../lib/errors.js';
 import { readEncrypted, removePath, writeEncrypted } from '../lib/storage.js';
 import { chunkText, parseDocument, typeLabel } from '../lib/parsers.js';
 import { embed, embeddingsAvailable, toVectorLiteral } from '../engine/embeddings.js';
+import { isVectorEnabled } from '../db/prisma.js';
 import { normalizeArabic } from './memory.service.js';
 
 /**
@@ -241,7 +242,8 @@ async function storeChunks(
 ): Promise<void> {
   if (chunks.length === 0) return;
 
-  const canEmbed = await embeddingsAvailable();
+  // بدون pgvector ما فيه عمود متجهات نكتب فيه — نكتفي بالكلمات المفتاحية.
+  const canEmbed = isVectorEnabled() && (await embeddingsAvailable());
 
   for (const chunk of chunks) {
     const created = await prisma.chunk.create({
@@ -324,6 +326,8 @@ interface RawRow {
  * متجهات فُهرست بنموذج مختلف.
  */
 async function semanticSearch(query: string, limit: number): Promise<RetrievedChunk[]> {
+  if (!isVectorEnabled()) return [];
+
   const vector = await embed(query);
   if (!vector) return [];
 
@@ -423,9 +427,15 @@ function keywordScore(content: string, words: string[]): number {
   return words.length > 0 ? hits / words.length : 0;
 }
 
+const SEMANTIC_WEIGHT = 0.7;
+const KEYWORD_WEIGHT = 0.3;
+
 /**
  * الاسترجاع الهجين: يدمج الدلالي مع الكلمات المفتاحية.
  * النتيجة النهائية = 0.7 × الدلالي + 0.3 × الكلمات.
+ *
+ * لو الدلالي مو شغّال (بدون pgvector مثلًا) نعطي الكلمات الوزن كامل،
+ * عشان الدرجة تظل على نفس المقياس وما تطلع ضعيفة بالغلط.
  */
 export async function retrieve(
   query: string,
@@ -436,17 +446,19 @@ export async function retrieve(
     keywordSearch(query, limit * 2),
   ]);
 
+  const keywordWeight = semantic.length > 0 ? KEYWORD_WEIGHT : 1;
+
   const merged = new Map<string, RetrievedChunk>();
 
   for (const chunk of semantic) {
-    merged.set(chunk.id, { ...chunk, score: chunk.score * 0.7 });
+    merged.set(chunk.id, { ...chunk, score: chunk.score * SEMANTIC_WEIGHT });
   }
   for (const chunk of keyword) {
     const existing = merged.get(chunk.id);
     if (existing) {
-      existing.score += chunk.score * 0.3;
+      existing.score += chunk.score * keywordWeight;
     } else {
-      merged.set(chunk.id, { ...chunk, score: chunk.score * 0.3 });
+      merged.set(chunk.id, { ...chunk, score: chunk.score * keywordWeight });
     }
   }
 

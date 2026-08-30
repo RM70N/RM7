@@ -4,6 +4,12 @@ import { AppError } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
 import { env } from '../lib/env.js';
 
+/**
+ * أخطاء "الميزة مو متاحة" — نقص اعتماد اختياري، مو عطل.
+ * تنرجع 503 للعميل بس تنسجّل تنبيهًا لا خطأ.
+ */
+export const DEGRADED_CODES = new Set(['NO_RENDERER', 'NO_FFMPEG', 'NO_MODEL']);
+
 /** مسار غير موجود. */
 export function notFoundHandler(req: Request, res: Response): void {
   res.status(404).json({
@@ -35,7 +41,15 @@ export function errorHandler(
   }
 
   if (error instanceof AppError) {
-    if (error.status >= 500) logger.error(`AppError: ${error.message}`, error.detail);
+    if (error.status >= 500) {
+      // نقص أداة اختيارية (متصفح الرسم مثلًا) مو خلل في السيرفر —
+      // نسجّله تنبيهًا عشان ما يغرق السجل بأخطاء على الأجهزة الخفيفة.
+      if (DEGRADED_CODES.has(error.code)) {
+        logger.warn(`ميزة مو متاحة: ${error.message}`);
+      } else {
+        logger.error(`AppError: ${error.message}`, error.detail);
+      }
+    }
     res.status(error.status).json({
       error: {
         code: error.code,
