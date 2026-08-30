@@ -332,7 +332,7 @@ bash deploy/tunnel.sh        # نافذة ثانية
 ولا استضافة ولا بطاقة بنكية:
 
 ```bash
-pkg install -y curl && curl -fsSL https://raw.githubusercontent.com/RM70N/RM7/main/deploy/termux.sh -o ~/termux.sh && bash ~/termux.sh
+pkg install -y git && rm -rf ~/.ahsmaha-boot && git clone --depth 1 https://github.com/RM70N/RM7.git ~/.ahsmaha-boot && bash ~/.ahsmaha-boot/deploy/termux.sh
 ```
 
 المحادثة والذاكرة والمهارات والملفات والمواقع والبحث كلها تشتغل.
