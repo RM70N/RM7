@@ -58,10 +58,26 @@ async function getLlamaInstance(): Promise<Llama> {
   if (llamaInstance) return llamaInstance;
 
   const { getLlama, LlamaLogLevel } = await import('node-llama-cpp');
-  llamaInstance = await getLlama({
-    build: 'never',
-    logLevel: env.isDevelopment ? LlamaLogLevel.warn : LlamaLogLevel.error,
-  });
+  const logLevel = env.isDevelopment ? LlamaLogLevel.warn : LlamaLogLevel.error;
+
+  try {
+    llamaInstance = await getLlama({ build: 'never', logLevel });
+  } catch (error) {
+    // الثنائيات الجاهزة مبنية على glibc، وأندرويد (Termux) يستخدم
+    // bionic فما تنفتح عنده. نبنيها من المصدر — بطيء مرة وحدة بس.
+    logger.warn('الثنائي الجاهز ما اشتغل — نبني المحرك من المصدر (ياخذ وقت)', error);
+    try {
+      llamaInstance = await getLlama({ build: 'auto', logLevel });
+    } catch (buildError) {
+      throw new AppError(
+        503,
+        'NO_ENGINE',
+        'ما قدرنا نشغّل محرك الاستدلال. على أندرويد تأكد من: pkg install build-essential cmake python',
+        buildError instanceof Error ? buildError.message : String(buildError),
+      );
+    }
+  }
+
   logger.info(
     `محرك احسمها جاهز — ${llamaInstance.gpu ? `تسريع ${llamaInstance.gpu}` : 'معالج فقط'}، ${llamaInstance.cpuMathCores} نواة`,
   );

@@ -8,7 +8,7 @@ import { env } from '../lib/env.js';
  * أخطاء "الميزة مو متاحة" — نقص اعتماد اختياري، مو عطل.
  * تنرجع 503 للعميل بس تنسجّل تنبيهًا لا خطأ.
  */
-export const DEGRADED_CODES = new Set(['NO_RENDERER', 'NO_FFMPEG', 'NO_MODEL']);
+export const DEGRADED_CODES = new Set(['NO_RENDERER', 'NO_FFMPEG', 'NO_MODEL', 'NO_ENGINE']);
 
 /** مسار غير موجود. */
 export function notFoundHandler(req: Request, res: Response): void {
