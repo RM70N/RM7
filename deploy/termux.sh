@@ -31,11 +31,56 @@ ok "Termux موجود"
 
 # ── 1. الحزم ──
 step "نثبّت الحزم الأساسية… (أطول خطوة، صبرك علينا)"
-pkg update -y >/dev/null 2>&1 || true
-pkg install -y nodejs-lts postgresql git ffmpeg libjpeg-turbo >/dev/null
+# ما نخفي مخرجات apt: لو فشلت حزمة لازم يبان السبب.
+pkg update -y || warn "تحديث قوائم الحزم ما ضبط — نكمل ونجرّب"
+
+# نثبّت وحدة وحدة عشان فشل حزمة ما يوقف الباقي، ونعرف وش اللي فشل
+install_pkg() {
+  echo
+  echo "  ── $1 ──"
+  pkg install -y "$1" && { ok "$1 جاهزة"; return 0; }
+  warn "ما قدرنا نثبّت $1"
+  return 1
+}
+
+# nodejs و nodejs-lts ما يتعايشون في Termux — لو واحد مثبت نخليه
+if command -v node >/dev/null 2>&1; then
+  ok "Node موجود مسبقًا: $(node -v)"
+else
+  install_pkg nodejs-lts || install_pkg nodejs || true
+fi
+
+for pkgname in postgresql git ffmpeg; do
+  command -v "$pkgname" >/dev/null 2>&1 && continue
+  install_pkg "$pkgname" || true
+done
+
+# ── نتأكد من الأدوات الأساسية بغض النظر عن نتيجة apt ──
+echo
+if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
+  echo
+  warn "Node أو npm ناقص. جرّب يدويًا وشوف الخطأ:"
+  echo "    pkg install nodejs"
+  echo
+  warn "لو طلع خطأ dpkg، صلّح حالة الحزم أول:"
+  echo "    dpkg --configure -a"
+  echo "    apt --fix-broken install"
+  echo "    pkg update && pkg upgrade -y"
+  die "ما نقدر نكمل بدون Node."
+fi
 ok "Node $(node -v) — npm $(npm -v)"
+
+command -v pg_ctl >/dev/null 2>&1 \
+  || die "PostgreSQL ناقص. جرّب: pkg install postgresql"
 ok "PostgreSQL $(pg_ctl --version | awk '{print $3}')"
-ok "ffmpeg موجود — الفيديو والموشن بيشتغلون"
+
+command -v git >/dev/null 2>&1 || die "git ناقص. جرّب: pkg install git"
+
+if command -v ffmpeg >/dev/null 2>&1; then
+  ok "ffmpeg موجود — الفيديو والموشن بيشتغلون"
+else
+  warn "ffmpeg ناقص — كل شي بيشتغل عدا تصدير الفيديو"
+fi
 
 # الاستوديو يحتاج متصفح لتشكيل النص العربي، وهذا مو متاح على أندرويد.
 warn "الاستوديو البصري (صور/فيديو) ما بيشتغل على الجوال —"
@@ -45,7 +90,7 @@ warn "  كل شي ثاني بيشتغل عادي."
 # ── 2. قاعدة البيانات ──
 step "نجهّز قاعدة البيانات…"
 if [ ! -d "$PGDATA" ]; then
-  initdb "$PGDATA" >/dev/null 2>&1
+  initdb "$PGDATA" || die "ما قدرنا ننشئ قاعدة البيانات — الخطأ فوق."
   ok "أنشأنا قاعدة البيانات"
 else
   ok "قاعدة البيانات موجودة"
