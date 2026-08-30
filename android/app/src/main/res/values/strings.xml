@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">احسمها AI</string>
+
+    <!-- شاشة الإعداد -->
+    <string name="setup_title">هلا والله</string>
+    <string name="setup_subtitle">اكتب عنوان سيرفر احسمها حقك عشان نربطك فيه.</string>
+    <string name="setup_hint">مثال: 123.45.67.89 أو ahsmaha.example.com</string>
+    <string name="setup_connect">اربطني</string>
+    <string name="setup_checking">نتأكد من الاتصال…</string>
+    <string name="setup_invalid">العنوان مو صحيح. اكتب عنوان IP أو دومين.</string>
+    <string name="setup_unreachable">ما قدرنا نوصل للسيرفر. تأكد أنه شغّال وأن العنوان صحيح.</string>
+    <string name="setup_bad_status">السيرفر رد بـ %1$d — تأكد أن احسمها شغّال عليه.</string>
+    <string name="setup_not_ahsmaha">وصلنا للعنوان، بس هذا مو سيرفر احسمها.</string>
+    <string name="setup_note">التطبيق واجهة لسيرفرك — كل بياناتك تبقى عندك.</string>
+
+    <!-- الشاشة الرئيسية -->
+    <string name="error_unreachable">ما قدرنا نوصل لـ %1$s\n\nتأكد أن السيرفر شغّال وأنك متصل بالإنترنت.</string>
+    <string name="retry">جرّب مرة ثانية</string>
+    <string name="change_server">غيّر السيرفر</string>
+    <string name="change_server_title">تغيير السيرفر</string>
+    <string name="change_server_message">السيرفر الحالي:\n%1$s\n\nتبي تربط سيرفرًا ثانيًا؟</string>
+    <string name="change">غيّر</string>
+    <string name="cancel">الغِ</string>
+    <string name="download_started">بدأ التحميل</string>
+    <string name="download_failed">ما قدرنا نحمّل الملف</string>
+    <string name="cannot_open_link">ما قدرنا نفتح الرابط</string>
+    <string name="logo_description">شعار احسمها</string>
+</resources>
