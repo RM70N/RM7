@@ -1,4 +1,5 @@
-import argon2 from 'argon2';
+import { argon2id, argon2Verify } from 'hash-wasm';
+import { webcrypto } from 'node:crypto';
 import { SignJWT, jwtVerify } from 'jose';
 import type { Owner } from '@prisma/client';
 import { prisma } from '../db/prisma.js';
@@ -15,21 +16,44 @@ const JWT_SECRET = new TextEncoder().encode(env.SESSION_SECRET);
 const JWT_ISSUER = 'ahsmaha-ai';
 const JWT_AUDIENCE = 'ahsmaha-owner';
 
-/** إعدادات Argon2id — متوازنة بين الأمان والسرعة. */
+/**
+ * إعدادات Argon2id — متوازنة بين الأمان والسرعة.
+ * نفس معاملات OWASP الموصى بها: 19 ميغا ذاكرة، جولتان.
+ */
 const ARGON_OPTIONS = {
-  type: argon2.argon2id,
-  memoryCost: 19456,
-  timeCost: 2,
   parallelism: 1,
+  iterations: 2,
+  memorySize: 19456,
+  hashLength: 32,
 } as const;
 
+const SALT_BYTES = 16;
+
+/**
+ * نستخدم Argon2id بصيغة WebAssembly بدل المكتبة الأصلية.
+ *
+ * ليش؟ المكتبة الأصلية تنبني على الجهاز، وما تنبني على أندرويد
+ * (Termux) لأن مترجمه الحديث ما عاد يقبل std::basic_string<unsigned
+ * char> اللي تعتمد عليها. نسخة WASM ما تحتاج بناء وتشتغل بنفس
+ * الشكل على السيرفر والجوال.
+ *
+ * الصيغة الناتجة قياسية (PHC)، فالهاشات القديمة تظل صالحة.
+ */
 export async function hashPassword(password: string): Promise<string> {
-  return argon2.hash(password, ARGON_OPTIONS);
+  const salt = new Uint8Array(SALT_BYTES);
+  webcrypto.getRandomValues(salt);
+
+  return argon2id({
+    password,
+    salt,
+    ...ARGON_OPTIONS,
+    outputType: 'encoded',
+  });
 }
 
 export async function verifyPassword(hash: string, password: string): Promise<boolean> {
   try {
-    return await argon2.verify(hash, password);
+    return await argon2Verify({ password, hash });
   } catch {
     return false;
   }
