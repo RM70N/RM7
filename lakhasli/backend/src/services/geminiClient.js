@@ -39,6 +39,11 @@ async function callGemini(body, { errorMessage = 'فشل التحليل الذك
     throw new AppError(502, errorMessage);
   }
 
+  if (candidate.finishReason === 'MAX_TOKENS') {
+    logger.error('رد Gemini انقطع لأنه تجاوز maxOutputTokens:', JSON.stringify(data).slice(0, 500));
+    throw new AppError(502, 'المحاضرة طويلة جدًا على التحليل بمرة وحدة. حاول برفع محاضرة أقصر، أو تواصل معنا.');
+  }
+
   const text = candidate.content?.parts?.map((p) => p.text || '').join('') || '';
   if (!text.trim()) {
     logger.error('Gemini أرجع رد فاضي:', JSON.stringify(data).slice(0, 500));
@@ -65,6 +70,11 @@ export async function generateJson({ systemInstruction, prompt, schema, maxOutpu
       responseMimeType: 'application/json',
       responseSchema: schema,
       maxOutputTokens,
+      // نعطّل "التفكير" الداخلي لـGemini 2.5: بدونه كانت رموز الإخراج (maxOutputTokens)
+      // تُستهلك بمعظمها بتفكير داخلي غير مرئي قبل حتى ما يبدأ يكتب الـJSON، فينقطع
+      // الرد بمنتصف الشجرة/القائمة ويفشل JSON.parse. تعطيله يخلي كل الميزانية للمخرج
+      // الفعلي المطلوب فقط (تأكدنا منه باختبار مباشر على Gemini API).
+      thinkingConfig: { thinkingBudget: 0 },
     },
   };
 
@@ -94,7 +104,7 @@ export async function generateFromImage({ prompt, base64Data, mimeType }) {
         parts: [{ inlineData: { mimeType, data: base64Data } }, { text: prompt }],
       },
     ],
-    generationConfig: { maxOutputTokens: 4096 },
+    generationConfig: { maxOutputTokens: 4096, thinkingConfig: { thinkingBudget: 0 } },
   };
 
   return callGemini(body, { errorMessage: 'فشل تحليل الصورة. حاول مرة ثانية بعد شوي.' });
