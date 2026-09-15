@@ -6,7 +6,10 @@ import { validateLectureUpload } from '../utils/validation.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError } from '../utils/AppError.js';
 import { runLecturePipeline } from '../services/pipelineService.js';
-import { expandMindMapNode } from '../services/aiAnalysisService.js';
+import { expandMindMapNode, evaluateExplanation } from '../services/aiAnalysisService.js';
+import { transcribeAudio } from '../services/transcriptionService.js';
+import { recordStudySession } from '../services/streakService.js';
+import { uploadAudioClip } from '../middleware/upload.js';
 import fs from 'node:fs/promises';
 
 export const lecturesRouter = Router();
@@ -91,6 +94,55 @@ lecturesRouter.post(
     });
 
     res.json({ children });
+  })
+);
+
+lecturesRouter.post(
+  '/:id/explain-challenge',
+  requireAuth,
+  (req, res, next) => uploadAudioClip(req, res, (err) => (err ? next(err) : next())),
+  asyncHandler(async (req, res) => {
+    const file = req.file;
+
+    try {
+      if (!file) throw new AppError(400, 'ما وصل أي تسجيل صوتي.');
+      if (!file.mimetype.startsWith('audio/')) {
+        throw new AppError(400, 'الملف المرسل مو تسجيل صوتي صالح.');
+      }
+
+      const snap = await firestore.collection('lectures').doc(req.params.id).get();
+      if (!snap.exists || snap.data().userId !== req.userId) {
+        throw new AppError(404, 'المحاضرة غير موجودة.');
+      }
+      const transcriptText = snap.data().transcriptText;
+      if (!transcriptText) throw new AppError(422, 'لازم تنتهي معالجة المحاضرة أولًا.');
+
+      const { text: studentExplanation } = await transcribeAudio(file.path, file.mimetype);
+      const evaluation = await evaluateExplanation({ lectureTranscript: transcriptText, studentExplanation });
+
+      const passed = evaluation.rating === 'excellent' || evaluation.rating === 'close';
+      let streakResult = null;
+      if (passed) {
+        streakResult = await recordStudySession(req.userId, {
+          lectureId: req.params.id,
+          activityType: 'explainChallenge',
+          passed: true,
+          score: 1,
+          totalQuestions: 1,
+          timeSpent: 0,
+        });
+      }
+
+      res.json({
+        rating: evaluation.rating,
+        missingPoint: evaluation.missingPoint || '',
+        encouragement: evaluation.encouragement || '',
+        transcript: studentExplanation,
+        streakCount: streakResult?.streakCount,
+      });
+    } finally {
+      if (file?.path) await fs.unlink(file.path).catch(() => {});
+    }
   })
 );
 

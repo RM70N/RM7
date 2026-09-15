@@ -92,7 +92,7 @@
     const lectureId = new URLSearchParams(location.search).get('id');
     if (!lectureId) window.location.href = 'dashboard.html';
 
-    ['tab-mindmap', 'tab-quiz', 'tab-flashcards'].forEach((id) => {
+    ['tab-mindmap', 'tab-quiz', 'tab-flashcards', 'tab-explain'].forEach((id) => {
       const page = id.replace('tab-', '');
       document.getElementById(id).href = `${page}.html?id=${lectureId}`;
     });

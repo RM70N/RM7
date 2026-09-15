@@ -160,3 +160,50 @@ ${sourceText.slice(0, 60000)}
   const result = await generateJson({ prompt, schema: EXPAND_SCHEMA, maxOutputTokens: 1500 });
   return result?.children || [];
 }
+
+const EXPLAIN_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    rating: {
+      type: 'STRING',
+      enum: ['excellent', 'close', 'retry'],
+      description:
+        'excellent = شرح واضح وصحيح وشامل. close = صحيح بالعموم لكن فاتته نقطة مهمة. retry = فيه أخطاء أو غموض واضح يحتاج مراجعة.',
+    },
+    missingPoint: {
+      type: 'STRING',
+      description: 'وصف مختصر لأهم نقطة ناقصة أو غير دقيقة (فاضي إذا rating=excellent)',
+    },
+    encouragement: {
+      type: 'STRING',
+      description: 'جملة تشجيعية قصيرة وودودة بنفس أسلوب رفيق دراسي، تناسب مستوى الشرح',
+    },
+  },
+  required: ['rating', 'missingPoint', 'encouragement'],
+};
+
+/**
+ * يقيّم شرح الطالب الشفهي (بعد تفريغه) مقابل محتوى المحاضرة الأصلي — تحدي "اشرح لصديق وهمي".
+ * @param {object} params
+ * @param {string} params.lectureTranscript - نص المحاضرة الأصلي (سياق)
+ * @param {string} params.studentExplanation - نص شرح الطالب المُفرَّغ
+ * @returns {Promise<{ rating: 'excellent'|'close'|'retry', missingPoint: string, encouragement: string }>}
+ */
+export async function evaluateExplanation({ lectureTranscript, studentExplanation }) {
+  const systemInstruction = `أنت "رفيق دراسي" ودود يستمع لطالب يشرح له موضوع محاضرة بكلامه الخاص، ودورك تقييم وضوح
+وصحة الشرح مقارنة بمحتوى المحاضرة الفعلي، بأسلوب متشجّع وغير قاسٍ أبدًا.`;
+
+  const prompt = `محتوى المحاضرة الأصلي:
+"""
+${lectureTranscript.slice(0, 40000)}
+"""
+
+شرح الطالب (مُفرَّغ من تسجيل صوتي):
+"""
+${studentExplanation.slice(0, 8000)}
+"""
+
+قيّم شرح الطالب: هل هو واضح وصحيح؟ هل فاتته نقطة أساسية من المحاضرة؟ أعد تقييمك حسب الصيغة المطلوبة فقط.`;
+
+  return generateJson({ systemInstruction, prompt, schema: EXPLAIN_SCHEMA, maxOutputTokens: 1000 });
+}

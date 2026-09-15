@@ -79,7 +79,6 @@
         if (!courses.length) {
           empty.hidden = false;
           grid.innerHTML = '';
-          sayMascot('welcome');
           return;
         }
         empty.hidden = true;
@@ -106,6 +105,7 @@
       document.getElementById('streak-line').textContent = profile.streakCount
         ? `🔥 سلسلة مذاكرة: ${profile.streakCount} يوم متواصل`
         : 'ابدأ اليوم أول سلسلة مذاكرة لك!';
+      sayMascot('welcome', { streakCount: profile.streakCount });
     } catch {
       /* تجاهل */
     }

@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>اشرح لصديق — لخّصلي</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .buddy-panel {
+      text-align: center;
+      padding: 40px 28px;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--sh-2);
+      animation: scaleIn .45s var(--e) both;
+    }
+    .buddy-avatar {
+      width: 74px;
+      height: 74px;
+      margin: 0 auto 14px;
+      border-radius: 24px;
+      background: var(--primary-50);
+      border: 1px solid var(--primary-100);
+      display: grid;
+      place-items: center;
+      font-size: 34px;
+    }
+    .buddy-bubble {
+      background: var(--surface-2);
+      border: 1px solid var(--line-2);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      font-size: 15.5px;
+      line-height: 1.9;
+      color: var(--ink);
+      max-width: 46ch;
+      margin: 0 auto 26px;
+    }
+    .rec-btn {
+      width: 92px;
+      height: 92px;
+      border-radius: 50%;
+      border: none;
+      background: var(--primary);
+      color: #fff;
+      font-size: 34px;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      margin: 0 auto;
+      transition: all .22s var(--e);
+      box-shadow: var(--sh-2);
+    }
+    .rec-btn:hover { transform: translateY(-2px); box-shadow: var(--sh-3); }
+    .rec-btn.is-recording {
+      background: var(--gap);
+      animation: softPulse 1.4s ease-in-out infinite;
+    }
+    .rec-timer {
+      font-family: 'Amiri', serif;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--ink);
+      margin-top: 16px;
+      font-variant-numeric: tabular-nums;
+    }
+    .rec-hint { color: var(--ink-2); font-size: 13.5px; margin-top: 6px; }
+    .rec-actions { display: flex; gap: 12px; justify-content: center; margin-top: 22px; flex-wrap: wrap; }
+    audio.rec-preview { width: 100%; max-width: 380px; margin: 18px auto 0; display: block; }
+    .rating-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 999px;
+      font-size: 17px;
+      font-weight: 700;
+      margin: 6px auto 18px;
+    }
+    .rating-badge.excellent { background: var(--quoted-bg); color: var(--quoted); border: 1px solid var(--quoted); }
+    .rating-badge.close { background: var(--inferred-bg); color: var(--inferred); border: 1px solid var(--inferred); }
+    .rating-badge.retry { background: var(--gap-bg); color: var(--gap); border: 1px solid var(--gap); }
+    .missing-note {
+      background: var(--surface-2);
+      border: 1px solid var(--line-2);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      font-size: 14.5px;
+      color: var(--ink-2);
+      line-height: 1.9;
+      text-align: start;
+      max-width: 46ch;
+      margin: 0 auto 18px;
+    }
+    .loading-box { padding: 60px 28px; text-align: center; color: var(--ink-2); }
+  </style>
+</head>
+<body>
+  <div id="nav-root"></div>
+
+  <main class="container" style="max-width: 620px; padding: 32px 24px 100px">
+    <a href="#" id="back-link" class="text-muted">← رجوع للملخص</a>
+
+    <div id="idle-view" class="card buddy-panel" style="margin-top:16px">
+      <div class="buddy-avatar">🧑‍🎓</div>
+      <div class="buddy-bubble">اشرحلي هذا الموضوع بكلامك كأني ما أعرفه 🗣️</div>
+      <button class="rec-btn" id="rec-btn" title="ابدأ التسجيل">🎙️</button>
+      <p class="rec-hint" id="rec-hint">اضغط وابدأ الشرح — عندك دقيقتين كحد أقصى</p>
+      <div class="rec-timer" id="rec-timer" hidden>00:00</div>
+    </div>
+
+    <div id="review-view" class="card buddy-panel" style="display:none; margin-top:16px">
+      <div class="buddy-avatar">🎧</div>
+      <p class="text-muted" style="margin-bottom:4px">سجلت شرحك، سمعه قبل ما ترسله</p>
+      <audio class="rec-preview" id="rec-preview" controls></audio>
+      <div class="rec-actions">
+        <button class="btn btn-outline" id="rerecord-btn">🔁 أعد التسجيل</button>
+        <button class="btn btn-primary" id="submit-btn">📤 أرسل للتقييم</button>
+      </div>
+    </div>
+
+    <div id="loading-view" class="card loading-box" style="display:none; margin-top:16px">
+      <div class="spinner" style="width:28px;height:28px;border-width:3px;margin:0 auto 14px"></div>
+      <p>نسمع شرحك ونقيّمه... لحظات 🎧</p>
+    </div>
+
+    <div id="result-view" class="card buddy-panel" style="display:none; margin-top:16px">
+      <div class="buddy-avatar" id="result-avatar">🧑‍🎓</div>
+      <div id="rating-badge" class="rating-badge"></div>
+      <div class="missing-note" id="missing-note" hidden></div>
+      <div class="buddy-bubble" id="encouragement-text"></div>
+      <div class="rec-actions">
+        <button class="btn btn-primary" id="retry-btn">🔁 حاول مرة ثانية</button>
+        <a href="#" class="btn btn-outline" id="back-summary">رجوع للملخص</a>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { requireUser } from './js/auth.js';
+    import { renderNav } from './js/nav.js';
+    import { api } from './js/api.js';
+    import { showToast } from './js/ui.js';
+    import { sayMascot } from './js/gamification.js';
+
+    const user = await requireUser();
+    renderNav(user, '');
+
+    const lectureId = new URLSearchParams(location.search).get('id');
+    if (!lectureId) window.location.href = 'dashboard.html';
+    document.getElementById('back-link').href = `summary.html?id=${lectureId}`;
+    document.getElementById('back-summary').href = `summary.html?id=${lectureId}`;
+
+    const MAX_MS = 2 * 60 * 1000; // دقيقتين كحد أقصى
+
+    const idleView = document.getElementById('idle-view');
+    const reviewView = document.getElementById('review-view');
+    const loadingView = document.getElementById('loading-view');
+    const resultView = document.getElementById('result-view');
+    const recBtn = document.getElementById('rec-btn');
+    const recHint = document.getElementById('rec-hint');
+    const recTimer = document.getElementById('rec-timer');
+
+    let mediaRecorder = null;
+    let chunks = [];
+    let recordedBlob = null;
+    let stream = null;
+    let startedAt = 0;
+    let timerHandle = null;
+    let autoStopHandle = null;
+
+    function showView(view) {
+      [idleView, reviewView, loadingView, resultView].forEach((v) => (v.style.display = 'none'));
+      view.style.display = 'block';
+    }
+
+    function formatTime(ms) {
+      const totalSec = Math.floor(ms / 1000);
+      const m = String(Math.floor(totalSec / 60)).padStart(2, '0');
+      const s = String(totalSec % 60).padStart(2, '0');
+      return `${m}:${s}`;
+    }
+
+    function stopStreamTracks() {
+      if (stream) {
+        stream.getTracks().forEach((t) => t.stop());
+        stream = null;
+      }
+    }
+
+    async function startRecording() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (err) {
+        showToast('ما قدرنا نوصل للمايكروفون. تأكد إنك سمحت للموقع باستخدام المايك من إعدادات المتصفح.', 'error');
+        return;
+      }
+
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
+      mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      chunks = [];
+
+      mediaRecorder.addEventListener('dataavailable', (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      });
+
+      mediaRecorder.addEventListener('stop', () => {
+        recordedBlob = new Blob(chunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+        stopStreamTracks();
+        clearInterval(timerHandle);
+        clearTimeout(autoStopHandle);
+        document.getElementById('rec-preview').src = URL.createObjectURL(recordedBlob);
+        showView(reviewView);
+      });
+
+      mediaRecorder.start();
+      startedAt = Date.now();
+      recBtn.classList.add('is-recording');
+      recBtn.textContent = '⏹️';
+      recBtn.title = 'إيقاف التسجيل';
+      recHint.textContent = 'يسجل الحين... اضغط للإيقاف';
+      recTimer.hidden = false;
+      recTimer.textContent = '00:00';
+
+      timerHandle = setInterval(() => {
+        recTimer.textContent = formatTime(Date.now() - startedAt);
+      }, 250);
+
+      autoStopHandle = setTimeout(() => {
+        if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+      }, MAX_MS);
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+    }
+
+    function resetToIdle() {
+      recordedBlob = null;
+      chunks = [];
+      recBtn.classList.remove('is-recording');
+      recBtn.textContent = '🎙️';
+      recBtn.title = 'ابدأ التسجيل';
+      recHint.textContent = 'اضغط وابدأ الشرح — عندك دقيقتين كحد أقصى';
+      recTimer.hidden = true;
+      showView(idleView);
+    }
+
+    recBtn.addEventListener('click', () => {
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        stopRecording();
+      } else {
+        startRecording();
+      }
+    });
+
+    document.getElementById('rerecord-btn').addEventListener('click', resetToIdle);
+    document.getElementById('retry-btn').addEventListener('click', resetToIdle);
+
+    document.getElementById('submit-btn').addEventListener('click', async () => {
+      if (!recordedBlob) return;
+      showView(loadingView);
+
+      try {
+        const ext = recordedBlob.type.includes('webm') ? 'webm' : 'ogg';
+        const formData = new FormData();
+        formData.append('file', recordedBlob, `explain.${ext}`);
+
+        const result = await api.postForm(`/api/lectures/${lectureId}/explain-challenge`, formData);
+
+        document.getElementById('rating-badge').className = `rating-badge ${result.rating}`;
+        const badgeText =
+          result.rating === 'excellent' ? 'واضح جداً 👏' : result.rating === 'close' ? 'قريب بس فاتتك نقطة' : 'راجعها مرة ثانية';
+        document.getElementById('rating-badge').textContent = badgeText;
+
+        const missingNote = document.getElementById('missing-note');
+        if (result.missingPoint) {
+          missingNote.hidden = false;
+          missingNote.textContent = `💡 ${result.missingPoint}`;
+        } else {
+          missingNote.hidden = true;
+        }
+
+        document.getElementById('encouragement-text').textContent = result.encouragement || '';
+        document.getElementById('result-avatar').textContent =
+          result.rating === 'excellent' ? '🎉' : result.rating === 'close' ? '🙂' : '💪';
+
+        showView(resultView);
+        if (result.rating === 'excellent' || result.rating === 'close') {
+          sayMascot(result.streakCount ? 'streak' : 'quizGood', { streakCount: result.streakCount });
+        }
+      } catch (err) {
+        showView(reviewView);
+        showToast(err.message, 'error');
+      }
+    });
+
+    window.addEventListener('beforeunload', stopStreamTracks);
+  </script>
+</body>
+</html>

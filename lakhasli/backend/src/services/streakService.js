@@ -11,18 +11,23 @@ function daysBetween(a, b) {
 }
 
 /**
- * يسجّل جلسة مذاكرة (مراجعة يومية ناجحة = 3 أسئلة صح على الأقل) ويحدّث السلسلة والنقاط.
- * السلسلة تُصفَّر تلقائيًا لو فات يوم كامل بدون مراجعة (نحسبها كسل عند أول جلسة جديدة
- * بدل الاعتماد على مهمة مجدولة، لأن السيرفر هنا Express عادي وليس Cloud Functions).
+ * يسجّل جلسة مذاكرة ويحدّث السلسلة والنقاط. أنواع النشاط المدعومة: quiz (اختبار
+ * سريع — النجاح = 3 أسئلة صح على الأقل) وexplainChallenge (تحدي "اشرح لصديق" —
+ * النجاح يُمرَّر صراحةً عبر session.passed بناءً على تقييم Gemini). السلسلة تُصفَّر
+ * تلقائيًا لو فات يوم كامل بدون مراجعة (نحسبها كسل عند أول جلسة جديدة بدل الاعتماد
+ * على مهمة مجدولة، لأن السيرفر هنا Express عادي وليس Cloud Functions).
  *
  * @param {string} userId
- * @param {{ lectureId: string, score: number, totalQuestions: number, timeSpent: number }} session
+ * @param {{ lectureId: string, score: number, totalQuestions: number, timeSpent: number, activityType?: string, passed?: boolean }} session
  */
 export async function recordStudySession(userId, session) {
   const userRef = firestore.collection('users').doc(userId);
   const sessionRef = firestore.collection('studySessions').doc();
   const today = new Date();
-  const passed = session.totalQuestions > 0 && session.score / session.totalQuestions >= 0.6 && session.score >= 3;
+  const passed =
+    session.passed !== undefined
+      ? session.passed
+      : session.totalQuestions > 0 && session.score / session.totalQuestions >= 0.6 && session.score >= 3;
 
   await firestore.runTransaction(async (tx) => {
     const userSnap = await tx.get(userRef);
@@ -62,6 +67,7 @@ export async function recordStudySession(userId, session) {
     tx.set(sessionRef, {
       userId,
       lectureId: session.lectureId,
+      activityType: session.activityType || 'quiz',
       date: FieldValue.serverTimestamp(),
       score: session.score,
       totalQuestions: session.totalQuestions,

@@ -394,11 +394,25 @@ button, input, select, textarea { font-family: 'Tajawal', system-ui, sans-serif;
   color: var(--ink);
   line-height: 2;
 }
-/* أنماط بطاقات اختيارية (تخصيص شكل بطاقاتي) */
-.fc-style-warm .flashcard-face { background: var(--inferred-bg); border-color: #E6D8B3; }
-.fc-style-warm .flashcard-face.back { background: var(--quoted-bg); border-color: #BFE0CC; }
-.fc-style-sketch .flashcard-face { border: 2px dashed var(--ink-2); border-radius: 16px; }
+/* أنماط بطاقات اختيارية (تخصيص شكل بطاقاتي) — نفس نظام الألوان (رمادي/أسود + لون الزر
+   الأساسي فقط)، الفرق بالخط وسمك الحدود وزوايا البطاقة، بدون أي ألوان جديدة. */
+.fc-style-warm .flashcard-face {
+  background: linear-gradient(160deg, var(--primary-50) 0%, var(--surface) 100%);
+  border: 1.5px solid var(--primary-100);
+  border-radius: 26px;
+}
+.fc-style-warm .flashcard-face.back {
+  background: linear-gradient(160deg, var(--primary-100) 0%, var(--primary-50) 100%);
+  border-color: var(--primary-100);
+}
+.fc-style-sketch .flashcard-face {
+  background: var(--surface);
+  border: 2px dashed var(--ink-3);
+  border-radius: 10px;
+  box-shadow: none;
+}
 .fc-style-sketch .flashcard-face.front { font-family: 'Amiri', serif; font-style: italic; }
+.fc-style-sketch .flashcard-face.back { background: var(--surface-2); border: 2px dashed var(--ink-3); }
 
 /* ---------- الخريطة الذهنية ---------- */
 .mindmap { padding: 24px 0; }

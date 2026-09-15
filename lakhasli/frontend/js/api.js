@@ -102,6 +102,21 @@ export const api = {
       xhr.send(formData);
     });
   },
+
+  // رفع ملف عام (FormData) بدون Content-Type يدوي — المتصفح يحدد boundary تلقائيًا.
+  async postForm(path, formData) {
+    if (isOffline()) {
+      throw new ApiError('ما فيه اتصال بالإنترنت حاليًا. تأكد من اتصالك وحاول مرة ثانية.', 0);
+    }
+    try {
+      const headers = await authHeader();
+      const res = await fetch(`${API_BASE_URL}${path}`, { method: 'POST', headers, body: formData });
+      return await handleResponse(res);
+    } catch (err) {
+      if (err instanceof ApiError) throw err;
+      throw new ApiError('فقدنا الاتصال بالسيرفر. تحقق من اتصالك وحاول مرة ثانية.', 0);
+    }
+  },
 };
 
 export { ApiError };

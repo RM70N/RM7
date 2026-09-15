@@ -37,13 +37,13 @@ export async function runLecturePipeline({ lectureId, courseId, courseName, sour
 
     if (sourceType === 'audio') {
       await updateStatus(lectureId, 'transcribing');
-      const { text } = await transcribeAudio(filePath);
+      const { text } = await transcribeAudio(filePath, mimetype);
       sourceText = text;
     } else if (sourceType === 'video') {
       await updateStatus(lectureId, 'transcribing');
       const audioPath = await extractAudioFromVideo(filePath);
       tempFiles.push(audioPath);
-      const { text } = await transcribeAudio(audioPath);
+      const { text } = await transcribeAudio(audioPath, 'audio/mpeg');
       sourceText = text;
     } else if (sourceType === 'pdf') {
       await updateStatus(lectureId, 'transcribing');

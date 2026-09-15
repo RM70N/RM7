@@ -48,6 +48,7 @@
     import { renderNav } from './js/nav.js';
     import { api } from './js/api.js';
     import { showToast } from './js/ui.js';
+    import { FLASHCARD_STYLES } from './js/gamification.js';
 
     const user = await requireUser();
     renderNav(user, '');
@@ -79,7 +80,14 @@
     });
 
     try {
-      const lecture = await api.get(`/api/lectures/${lectureId}`);
+      const [lecture, profile] = await Promise.all([
+        api.get(`/api/lectures/${lectureId}`),
+        api.get('/api/users/me').catch(() => null),
+      ]);
+
+      const activeStyle = FLASHCARD_STYLES.find((s) => s.id === profile?.flashcardStyle);
+      if (activeStyle?.className) cardEl.classList.add(activeStyle.className);
+
       cards = lecture.flashcards || [];
       if (!cards.length) {
         document.getElementById('empty-state').hidden = false;

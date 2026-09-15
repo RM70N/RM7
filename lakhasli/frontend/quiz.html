@@ -167,7 +167,7 @@
       if (i === q.correctAnswerIndex) {
         score += 1;
         correctStreak += 1;
-        sayMascot('quizGood');
+        sayMascot('quizGood', { correctStreak });
       } else {
         correctStreak = 0;
         sayMascot('quizBad');
@@ -200,6 +200,7 @@
         document.getElementById('result-note').textContent = result.passed
           ? `🔥 سلسلتك الحين ${result.streakCount} يوم! +10 نقاط`
           : 'جاوب 3 أسئلة صح على الأقل عشان تكمّل سلسلتك اليومية.';
+        if (result.passed) sayMascot('streak', { streakCount: result.streakCount });
       } catch {
         document.getElementById('result-note').textContent = '';
       }

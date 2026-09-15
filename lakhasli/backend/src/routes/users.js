@@ -111,6 +111,22 @@ usersRouter.post(
   })
 );
 
+// شكل البطاقات (شكل بطاقاتي) — تخصيص بصري مجاني بالكامل، غير مرتبط بنقاط أو فتح مسبق.
+const FLASHCARD_STYLES = ['simple', 'warm', 'sketch'];
+
+usersRouter.post(
+  '/me/flashcard-style',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { styleId } = req.body;
+    if (!FLASHCARD_STYLES.includes(styleId)) throw new AppError(400, 'شكل بطاقات غير معروف.');
+
+    const ref = firestore.collection('users').doc(req.userId);
+    await ref.set({ flashcardStyle: styleId }, { merge: true });
+    res.json({ flashcardStyle: styleId });
+  })
+);
+
 usersRouter.post(
   '/me/active-frame',
   requireAuth,
