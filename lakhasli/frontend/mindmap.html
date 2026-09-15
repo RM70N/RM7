@@ -5,23 +5,68 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>الخريطة الذهنية — لخّصلي</title>
   <link rel="stylesheet" href="css/style.css" />
+  <style>
+    #mindmap-svg {
+      width: 100%;
+      height: 70vh;
+      min-height: 420px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    /* عناصر محتوى العقد بالخريطة (markmap-foreign) عبارة عن HTML حقيقي داخل SVG
+       (foreignObject)، لذلك تقدر تحتوي أزرار تفاعلية حقيقية — نص العقدة يبقى LTR
+       (اتجاه نمو الشجرة نفسه من markmap) بينما محتوى كل عقدة نصه عربي RTL طبيعي. */
+    .markmap-foreign > div {
+      direction: rtl;
+      text-align: right !important;
+      font-family: 'Tajawal', sans-serif;
+    }
+    .mm-actions {
+      display: inline-flex;
+      gap: 4px;
+      margin-inline-start: 8px;
+    }
+    .mm-expand {
+      font-family: 'Tajawal', sans-serif;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--primary);
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      cursor: pointer;
+    }
+    .mm-expand:disabled {
+      opacity: 0.5;
+      cursor: wait;
+    }
+  </style>
 </head>
 <body>
   <div id="nav-root"></div>
 
-  <main class="container" style="max-width: 720px; padding: 32px 20px 100px">
+  <main class="container" style="max-width: 900px; padding: 32px 20px 100px">
     <a href="#" id="back-link" class="text-muted">← رجوع للملخص</a>
     <h1 style="margin: 16px 0">🧠 الخريطة الذهنية</h1>
-    <p class="text-muted">اضغط "وضّح أكثر" أو "أعطني مثال" على أي فرع لتوسيعه فورًا بمساعدة الذكاء الاصطناعي.</p>
+    <p class="text-muted">اضغط "وضّح أكثر" أو "مثال" بجانب أي فرع لتوسيعه فورًا بمساعدة الذكاء الاصطناعي (Gemini) دون إعادة تحميل الصفحة.</p>
+    <p class="text-muted" style="font-size:13px">ملاحظة: الشجرة تنمو من اليسار لليمين (سلوك مكتبة markmap الافتراضي، لا تدعم عكس الاتجاه للعربي) — نص كل عقدة نفسه يُعرض بشكل عربي طبيعي.</p>
 
-    <div class="mindmap card" id="mindmap-root"></div>
+    <div id="empty-state" class="empty-state" hidden>ما فيه خريطة ذهنية متاحة لهذه المحاضرة.</div>
+    <svg id="mindmap-svg" hidden></svg>
   </main>
+
+  <!-- d3 لازم يُحمَّل قبل markmap-view (تعتمد عليه وقت التحميل)، ثم markmap-lib -->
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12/dist/browser/index.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12/dist/browser/index.iife.js"></script>
 
   <script type="module">
     import { requireUser } from './js/auth.js';
     import { renderNav } from './js/nav.js';
     import { api } from './js/api.js';
     import { showToast } from './js/ui.js';
+    import { renderMindmap, updateMindmap, findNodeByPath } from './js/mindmapRenderer.js';
 
     const user = await requireUser();
     renderNav(user, '');
@@ -30,59 +75,52 @@
     if (!lectureId) window.location.href = 'dashboard.html';
     document.getElementById('back-link').href = `summary.html?id=${lectureId}`;
 
-    function buildNode(node, isRoot = false) {
-      const wrap = document.createElement('div');
-      wrap.className = 'mm-node';
-
-      const titleRow = document.createElement('div');
-      titleRow.className = 'mm-title' + (isRoot ? ' root' : '');
-      titleRow.textContent = node.title;
-      wrap.appendChild(titleRow);
-
-      const childrenWrap = document.createElement('div');
-      wrap.appendChild(childrenWrap);
-
-      (node.children || []).forEach((child) => childrenWrap.appendChild(buildNode(child)));
-
-      if (!isRoot) {
-        const actions = document.createElement('div');
-        actions.className = 'mm-actions';
-        actions.innerHTML = `<button data-action="clarify">وضّح أكثر</button> · <button data-action="example">أعطني مثال</button>`;
-        wrap.appendChild(actions);
-
-        actions.querySelectorAll('button').forEach((btn) => {
-          btn.addEventListener('click', async () => {
-            btn.disabled = true;
-            btn.textContent = 'جارٍ التوليد...';
-            try {
-              const { children } = await api.post(`/api/lectures/${lectureId}/expand-node`, {
-                nodeTitle: node.title,
-                requestType: btn.dataset.action,
-              });
-              children.forEach((c) => childrenWrap.appendChild(buildNode(c)));
-            } catch (err) {
-              showToast(err.message, 'error');
-            } finally {
-              actions.remove();
-            }
-          });
-        });
-      }
-
-      return wrap;
-    }
+    let treeData = null;
+    let mm = null;
 
     try {
       const lecture = await api.get(`/api/lectures/${lectureId}`);
-      const root = document.getElementById('mindmap-root');
       if (!lecture.mindMapJson) {
-        root.innerHTML = '<p class="text-muted">ما فيه خريطة ذهنية متاحة لهذه المحاضرة.</p>';
+        document.getElementById('empty-state').hidden = false;
       } else {
-        root.appendChild(buildNode(lecture.mindMapJson, true));
+        treeData = lecture.mindMapJson;
+        const svg = document.getElementById('mindmap-svg');
+        svg.hidden = false;
+        mm = renderMindmap(svg, treeData);
       }
     } catch (err) {
       showToast(err.message, 'error');
     }
+
+    // تفويض النقر (event delegation): يشتغل مع أي عقد تُضاف لاحقًا بعد التوسيع
+    // بدون الحاجة لإعادة ربط مستمعين على كل عقدة جديدة.
+    document.body.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.mm-expand');
+      if (!btn || !treeData) return;
+      e.preventDefault();
+
+      const path = btn.dataset.path.split(',').map(Number);
+      const node = findNodeByPath(treeData, path);
+      if (!node) return;
+
+      const originalLabel = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '...';
+
+      try {
+        const { children } = await api.post(`/api/lectures/${lectureId}/expand-node`, {
+          nodeTitle: node.title,
+          requestType: btn.dataset.action,
+        });
+        node.children = [...(node.children || []), ...children];
+        await updateMindmap(mm, treeData);
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalLabel;
+      }
+    });
   </script>
 </body>
 </html>

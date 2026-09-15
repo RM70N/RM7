@@ -87,6 +87,7 @@
       <p class="num" id="pride-sessions">0</p>
       <p style="opacity:.9">جلسة مراجعة هالأسبوع</p>
       <p style="margin-top:10px" id="pride-detail"></p>
+      <button class="btn" style="margin-top:14px; background:#fff; color:var(--primary)" id="pride-listen">🔊 استمع لملخصك الصوتي</button>
     </div>
 
     <div class="card" style="margin-top:20px">
@@ -151,6 +152,26 @@
     } catch {
       /* تجاهل */
     }
+
+    // المقطع الصوتي يُولَّد عند الطلب فقط (edge-tts على السيرفر) — بدون أي تخزين دائم.
+    document.getElementById('pride-listen').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '⏳ جارٍ التوليد...';
+      try {
+        const blob = await api.getBlob('/api/users/me/weekly-summary/audio');
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audio.play();
+        audio.addEventListener('ended', () => URL.revokeObjectURL(url));
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = original;
+      }
+    });
   </script>
 </body>
 </html>

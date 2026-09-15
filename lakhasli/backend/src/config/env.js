@@ -17,11 +17,13 @@ export const env = {
     databaseURL: required('FIREBASE_DATABASE_URL'),
   },
 
-  openaiApiKey: required('OPENAI_API_KEY'),
-  whisperModel: process.env.WHISPER_MODEL || 'whisper-1',
+  // تحويل الصوت إلى نص — Groq API (نموذج whisper-large-v3)
+  groqApiKey: required('GROQ_API_KEY'),
+  whisperModel: process.env.WHISPER_MODEL || 'whisper-large-v3',
 
-  anthropicApiKey: required('ANTHROPIC_API_KEY'),
-  claudeModel: process.env.CLAUDE_MODEL || 'claude-sonnet-4-5',
+  // التلخيص والتحليل الذكي + الرؤية (الصور) + المقارنة — Google Gemini API
+  geminiApiKey: required('GEMINI_API_KEY'),
+  geminiModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
 
   limits: {
     audioMb: Number(process.env.MAX_AUDIO_MB || 25),
@@ -34,10 +36,10 @@ export function isFirebaseConfigured() {
   return Boolean(env.firebase.projectId && env.firebase.clientEmail && env.firebase.privateKey);
 }
 
-export function isWhisperConfigured() {
-  return Boolean(env.openaiApiKey);
+export function isGroqConfigured() {
+  return Boolean(env.groqApiKey);
 }
 
-export function isClaudeConfigured() {
-  return Boolean(env.anthropicApiKey);
+export function isGeminiConfigured() {
+  return Boolean(env.geminiApiKey);
 }

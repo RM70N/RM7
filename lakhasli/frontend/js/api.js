@@ -52,6 +52,24 @@ export const api = {
     request(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
   delete: (path) => request(path, { method: 'DELETE' }),
 
+  async getBlob(path) {
+    if (isOffline()) {
+      throw new ApiError('ما فيه اتصال بالإنترنت حاليًا. تأكد من اتصالك وحاول مرة ثانية.', 0);
+    }
+    try {
+      const headers = await authHeader();
+      const res = await fetch(`${API_BASE_URL}${path}`, { headers });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new ApiError(body?.error || 'صار خطأ غير متوقع.', res.status);
+      }
+      return await res.blob();
+    } catch (err) {
+      if (err instanceof ApiError) throw err;
+      throw new ApiError('فقدنا الاتصال بالسيرفر. تحقق من اتصالك وحاول مرة ثانية.', 0);
+    }
+  },
+
   async uploadLecture(formData, onProgress) {
     const headers = await authHeader();
     return new Promise((resolve, reject) => {

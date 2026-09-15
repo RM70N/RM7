@@ -3,10 +3,32 @@ import { firestore, FieldValue } from '../config/firebaseAdmin.js';
 import { requireAuth } from '../middleware/auth.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError } from '../utils/AppError.js';
+import { synthesizeSpeech } from '../services/tts.js';
 
 export const usersRouter = Router();
 
 const THEME_COST = 100;
+
+async function computeWeeklySummary(userId) {
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const snap = await firestore
+    .collection('studySessions')
+    .where('userId', '==', userId)
+    .where('date', '>=', weekAgo)
+    .get();
+
+  const sessions = snap.docs.map((d) => d.data());
+  const lecturesStudied = new Set(sessions.map((s) => s.lectureId)).size;
+  const totalCorrect = sessions.reduce((sum, s) => sum + (s.score || 0), 0);
+  const totalTime = sessions.reduce((sum, s) => sum + (s.timeSpent || 0), 0);
+
+  return {
+    sessionsCount: sessions.length,
+    lecturesStudied,
+    totalCorrect,
+    totalTimeMinutes: Math.round(totalTime / 60),
+  };
+}
 
 usersRouter.get(
   '/me',
@@ -38,24 +60,24 @@ usersRouter.get(
   '/me/weekly-summary',
   requireAuth,
   asyncHandler(async (req, res) => {
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const snap = await firestore
-      .collection('studySessions')
-      .where('userId', '==', req.userId)
-      .where('date', '>=', weekAgo)
-      .get();
+    res.json(await computeWeeklySummary(req.userId));
+  })
+);
 
-    const sessions = snap.docs.map((d) => d.data());
-    const lecturesStudied = new Set(sessions.map((s) => s.lectureId)).size;
-    const totalCorrect = sessions.reduce((sum, s) => sum + (s.score || 0), 0);
-    const totalTime = sessions.reduce((sum, s) => sum + (s.timeSpent || 0), 0);
+// يولّد مقطع صوتي (edge-tts) لملخص لحظة الفخر الأسبوعية عند الطلب فقط — بدون أي
+// تخزين دائم للملف الصوتي (لا Firebase Storage ولا غيره)، اتساقًا مع بقية المشروع.
+usersRouter.get(
+  '/me/weekly-summary/audio',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const summary = await computeWeeklySummary(req.userId);
+    const text = summary.sessionsCount
+      ? `هذا الأسبوع سويت ${summary.sessionsCount} جلسة مراجعة، وراجعت ${summary.lecturesStudied} محاضرة، وقضيت ${summary.totalTimeMinutes} دقيقة بالمذاكرة. استمر على هالمستوى!`
+      : 'ما سجّلت أي جلسة مراجعة هالأسبوع. يلا نبدأ من اليوم!';
 
-    res.json({
-      sessionsCount: sessions.length,
-      lecturesStudied,
-      totalCorrect,
-      totalTimeMinutes: Math.round(totalTime / 60),
-    });
+    const audioBuffer = await synthesizeSpeech(text);
+    res.set('Content-Type', 'audio/mpeg');
+    res.send(audioBuffer);
   })
 );
 

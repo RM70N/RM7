@@ -74,6 +74,8 @@
       <span><span class="dot" style="background:var(--gap)"></span> فجوة محتملة</span>
     </div>
 
+    <button class="btn btn-outline" id="read-aloud-btn" style="margin-bottom:16px" hidden>🔊 اقرأ الملخص</button>
+
     <div class="card" id="summary-card">
       <p id="summary-text" style="font-size:17px"></p>
     </div>
@@ -137,6 +139,28 @@
         .join('');
 
       document.getElementById('summary-text').innerHTML = html || 'ما فيه ملخص متاح.';
+
+      // قراءة الملخص صوتيًا عبر Web Speech API المدمجة بالمتصفح — بدون أي اتصال
+      // بالسيرفر، ومناسبة لنصوص قصيرة/متوسطة زي ملخص محاضرة.
+      const plainSummary = confidenceMap.map((s) => s.text).join(' ');
+      if (plainSummary && 'speechSynthesis' in window) {
+        const readBtn = document.getElementById('read-aloud-btn');
+        readBtn.hidden = false;
+
+        readBtn.addEventListener('click', () => {
+          if (speechSynthesis.speaking) {
+            speechSynthesis.cancel();
+            readBtn.textContent = '🔊 اقرأ الملخص';
+            return;
+          }
+          const utterance = new SpeechSynthesisUtterance(plainSummary);
+          utterance.lang = 'ar-SA';
+          utterance.onend = () => (readBtn.textContent = '🔊 اقرأ الملخص');
+          utterance.onerror = () => (readBtn.textContent = '🔊 اقرأ الملخص');
+          speechSynthesis.speak(utterance);
+          readBtn.textContent = '⏹️ إيقاف القراءة';
+        });
+      }
 
       document.querySelectorAll('.check-icon').forEach((icon) => {
         icon.addEventListener('click', (e) => {
