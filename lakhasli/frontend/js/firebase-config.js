@@ -7,13 +7,17 @@ import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.13.0/firebas
 import { getDatabase } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js';
 
 const firebaseConfig = {
-  apiKey: 'REPLACE_ME',
-  authDomain: 'REPLACE_ME.firebaseapp.com',
-  projectId: 'REPLACE_ME',
-  databaseURL: 'https://REPLACE_ME-default-rtdb.firebaseio.com',
-  storageBucket: '', // ما نستخدم Firebase Storage بهذا المشروع
-  messagingSenderId: 'REPLACE_ME',
-  appId: 'REPLACE_ME',
+  apiKey: 'AIzaSyC5Kzsr0xV1q51BiP-xWpo48kihU2Xx4Xw',
+  authDomain: 'lakshle.firebaseapp.com',
+  projectId: 'lakshle',
+  // تأكد من هذا الرابط بعد إنشاء Realtime Database فعليًا من الكونسول —
+  // إذا اخترت موقع غير us-central1 بيكون الرابط بصيغة:
+  // https://lakshle-default-rtdb.<region>.firebasedatabase.app
+  databaseURL: 'https://lakshle-default-rtdb.firebaseio.com',
+  storageBucket: '', // ما نستخدم Firebase Storage بهذا المشروع (القيمة الأصلية: lakshle.firebasestorage.app)
+  messagingSenderId: '83706359590',
+  appId: '1:83706359590:web:5da27ebc95d85aeb529be7',
+  measurementId: 'G-JQ92Q2YPKR',
 };
 
 export const firebaseApp = initializeApp(firebaseConfig);

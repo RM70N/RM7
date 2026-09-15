@@ -42,34 +42,46 @@ lakhasli/
 
 ## الإعداد
 
-### 1. مشروع Firebase
+### 0. مشروع Firebase المستخدم حاليًا
 
-أنشئ مشروع Firebase جديد ثم فعّل:
-- **Authentication** → طرق الدخول: البريد/كلمة المرور + Google
-- **Firestore Database** (وضع الإنتاج) → انشر `firestore.rules`
-- **Realtime Database** (وضع الإنتاج) → انشر `database.rules.json`
-- **لا تفعّل Storage** — غير مستخدم بهذا المشروع أساسًا
+الواجهة (`frontend/js/firebase-config.js`) معبّأة مسبقًا بإعدادات مشروع Firebase
+الحقيقي **lakshle** (apiKey, authDomain, projectId, messagingSenderId, appId).
+باقٍ عليك بالكونسول (<https://console.firebase.google.com/project/lakshle>):
 
-من *Project settings → Service accounts*: ولّد مفتاح خاص (JSON) للباك إند.
-من *Project settings → Your apps → Web app*: انسخ إعدادات الويب للواجهة.
+1. **Authentication → Sign-in method** → فعّل: البريد/كلمة المرور + Google.
+2. **Firestore Database** → أنشئه (وضع الإنتاج) → بعدين بتبويب *Rules* الصق محتوى
+   `lakhasli/firestore.rules` وانشره.
+3. **Realtime Database** → أنشئه (وضع الإنتاج، اختر أي موقع) → بتبويب *Rules* الصق
+   محتوى `lakhasli/database.rules.json` وانشره. **بعد الإنشاء انسخ رابط القاعدة
+   الفعلي** (يظهر أعلى صفحة Realtime Database) وحدّثه بـ:
+   - `frontend/js/firebase-config.js` → `databaseURL`
+   - `backend/.env` → `FIREBASE_DATABASE_URL`
+   (القيمة الحالية `https://lakshle-default-rtdb.firebaseio.com` تفترض موقع
+   us-central1 — إذا اخترت موقعًا ثانيًا الرابط يكون بصيغة مختلفة تمامًا).
+4. **لا تفعّل Storage** — غير مستخدم بهذا المشروع أساسًا (حتى لو ظهر لك رابط
+   `lakshle.firebasestorage.app` بإعدادات الويب، تم تجاهله عمدًا بالكود).
+5. **Project settings → Service accounts → Generate new private key** → يحمّل
+   ملف JSON فيه `client_email` و`private_key`، هذولا يحتاجهم الباك إند فقط
+   (الواجهة لا تحتاج ولا تشوف هذا الملف إطلاقًا).
 
-### 2. الباك إند
+### 1. الباك إند
 
 ```bash
 cd lakhasli/backend
 cp .env.example .env
-# عبّي: FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY,
-#       FIREBASE_DATABASE_URL, OPENAI_API_KEY, ANTHROPIC_API_KEY
+# .env.example معبّى مسبقًا بـ FIREBASE_PROJECT_ID و FIREBASE_DATABASE_URL
+# لمشروع lakshle — لسا لازم تعبّي يدويًا:
+#   FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY  (من ملف JSON بالخطوة 0.5)
+#   OPENAI_API_KEY, ANTHROPIC_API_KEY
 npm install
 npm run dev
 ```
 
 السيرفر يشتغل على `http://localhost:4100` (أو المنفذ اللي بـ`.env`).
 
-### 3. الواجهة
+### 2. الواجهة
 
-عبّي `frontend/js/firebase-config.js` بإعدادات الويب من Firebase (هذي القيم عامة
-بطبيعتها، الحماية الفعلية من Security Rules). ثم شغّلها بأي سيرفر ملفات ثابتة:
+جاهزة بإعدادات Firebase مسبقًا. شغّلها بأي سيرفر ملفات ثابتة:
 
 ```bash
 cd lakhasli/frontend
@@ -83,7 +95,7 @@ npx serve .
 ```
 (أو عدّل `API_BASE_URL` مباشرة بـ`js/firebase-config.js`.)
 
-### 4. النشر
+### 3. النشر
 
 - **الواجهة (Netlify):** اسحب مجلد `frontend/` كموقع ثابت، أو اربطه بـGit.
 - **الباك إند (Railway):** انشر مجلد `backend/`، وتأكد إن ffmpeg متوفر (حزمة
