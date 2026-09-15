@@ -1,15 +1,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Tajawal:wght@300;400;500;700;800&display=swap');
 
 :root {
-  /* محايد: رمادي + أسود دافئ فقط */
-  --bg: #F1F1EE;
-  --surface: #FFFFFF;
-  --surface-2: #F7F7F4;
+  /* محايد: رمادي هادئ + أسود دافئ فقط — الخلفية العامة أفتح طبقة، والبطاقات/الأقسام
+     درجة أغمق شوي عن قصد لإحساس عمق خفيف بدون تباين حاد أو مظهر أبيض تمامًا. */
+  --bg: #EDECE6;
+  --surface: #E2E1D9;
+  --surface-2: #D6D5CB;
   --ink: #1D1C19;
   --ink-2: #6B6B65;
   --ink-3: #9B9B94;
-  --line: #E2E1DB;
-  --line-2: #ECEBE5;
+  --line: #C8C7BB;
+  --line-2: #D1D0C4;
 
   /* لون واحد بارز للأزرار الأساسية (CTA) فقط */
   --primary: #33415C;
@@ -213,7 +214,7 @@ button, input, select, textarea { font-family: 'Tajawal', system-ui, sans-serif;
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgba(241, 241, 238, .88);
+  background: rgba(237, 236, 230, .88);
   backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--line);
 }
