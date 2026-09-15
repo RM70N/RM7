@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>رفع محاضرة — لخّصلي</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .dropzone {
+      border: 2.5px dashed var(--border);
+      border-radius: var(--radius-lg);
+      padding: 50px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+    .dropzone.dragover {
+      border-color: var(--primary);
+      background: var(--primary-light);
+    }
+    .type-options {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .type-option {
+      flex: 1;
+      min-width: 100px;
+      text-align: center;
+      padding: 14px 10px;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border);
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .type-option.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      font-weight: 700;
+    }
+    .progress-bar {
+      height: 10px;
+      border-radius: 6px;
+      background: var(--surface-alt);
+      overflow: hidden;
+      margin-top: 16px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--primary);
+      width: 0%;
+      transition: width 0.2s ease;
+    }
+  </style>
+</head>
+<body>
+  <div id="nav-root"></div>
+
+  <main class="container" style="max-width: 560px; padding: 32px 20px 100px">
+    <a href="#" id="back-link" class="text-muted">← رجوع للمقرر</a>
+    <h1 style="margin: 16px 0 24px">رفع محاضرة جديدة</h1>
+
+    <div id="upload-form">
+      <div class="type-options" id="type-options">
+        <div class="type-option active" data-type="audio">🎙️ صوت</div>
+        <div class="type-option" data-type="video">🎬 فيديو</div>
+        <div class="type-option" data-type="pdf">📄 PDF</div>
+        <div class="type-option" data-type="image">🖼️ صورة سبورة</div>
+      </div>
+
+      <div class="dropzone" id="dropzone">
+        <p style="font-size:38px; margin-bottom:8px" id="dz-icon">🎙️</p>
+        <p id="dz-text">اسحب الملف هنا أو اضغط للاختيار</p>
+        <p class="text-muted" id="dz-hint" style="font-size:13px; margin-top:6px"></p>
+        <input type="file" id="file-input" hidden />
+      </div>
+
+      <div id="selected-file" class="card" style="margin-top:16px; display:none">
+        <div class="flex justify-between items-center">
+          <span id="selected-file-name"></span>
+          <button class="btn btn-ghost" id="clear-file">✕</button>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-block" id="submit-upload" style="margin-top:20px" disabled>ابدأ الرفع</button>
+    </div>
+
+    <!-- حالة الرفع والمعالجة -->
+    <div id="progress-view" style="display:none">
+      <div class="progress-bar"><div class="progress-bar-fill" id="upload-progress-fill"></div></div>
+      <p class="text-muted" style="text-align:center; margin-top:8px" id="upload-progress-label">0%</p>
+    </div>
+
+    <div class="status-pipeline" id="status-pipeline" style="display:none">
+      <div class="status-step" data-step="uploading"><span class="dot"></span> رفع الملف</div>
+      <div class="status-step" data-step="transcribing"><span class="dot"></span> تفريغ المحتوى إلى نص</div>
+      <div class="status-step" data-step="analyzing"><span class="dot"></span> التحليل الذكي وتوليد الملخص</div>
+      <div class="status-step" data-step="done"><span class="dot"></span> جاهز!</div>
+    </div>
+
+    <div id="error-view" class="card" style="display:none; border-color:var(--danger); margin-top:20px">
+      <p style="color:var(--danger); font-weight:700" id="error-message"></p>
+      <button class="btn btn-outline btn-block" id="retry-btn" style="margin-top:12px">حاول مرة ثانية</button>
+    </div>
+
+    <a id="view-summary-btn" href="#" class="btn btn-accent btn-block" style="display:none; margin-top:20px">شوف الملخص 🎉</a>
+  </main>
+
+  <script type="module">
+    import { doc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
+    import { db } from './js/firebase-config.js';
+    import { requireUser } from './js/auth.js';
+    import { renderNav } from './js/nav.js';
+    import { api } from './js/api.js';
+    import { showToast, watchOfflineState } from './js/ui.js';
+    import { mountMascot, sayMascot } from './js/gamification.js';
+
+    watchOfflineState();
+    const user = await requireUser();
+    renderNav(user, '');
+    mountMascot();
+
+    const params = new URLSearchParams(location.search);
+    const courseId = params.get('courseId');
+    let lectureId = params.get('lectureId');
+
+    document.getElementById('back-link').href = courseId ? `course.html?id=${courseId}` : 'dashboard.html';
+
+    const HINTS = {
+      audio: 'MP3, WAV, M4A — حتى 25 م.ب',
+      video: 'MP4, WEBM, MOV — حتى 200 م.ب (نستخرج الصوت منه تلقائيًا)',
+      pdf: 'ملف PDF نصّي — حتى 20 م.ب',
+      image: 'صورة واضحة لسبورة أو ملزمة — حتى 20 م.ب',
+    };
+    const ICONS = { audio: '🎙️', video: '🎬', pdf: '📄', image: '🖼️' };
+    const ACCEPT = {
+      audio: 'audio/*',
+      video: 'video/*',
+      pdf: 'application/pdf',
+      image: 'image/*',
+    };
+
+    let sourceType = 'audio';
+    let selectedFile = null;
+
+    function selectType(type) {
+      sourceType = type;
+      document.querySelectorAll('.type-option').forEach((el) => el.classList.toggle('active', el.dataset.type === type));
+      document.getElementById('dz-icon').textContent = ICONS[type];
+      document.getElementById('dz-hint').textContent = HINTS[type];
+      document.getElementById('file-input').accept = ACCEPT[type];
+    }
+    selectType('audio');
+
+    document.getElementById('type-options').addEventListener('click', (e) => {
+      const opt = e.target.closest('.type-option');
+      if (opt) selectType(opt.dataset.type);
+    });
+
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('file-input');
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) setFile(fileInput.files[0]);
+    });
+
+    function setFile(file) {
+      selectedFile = file;
+      document.getElementById('selected-file').style.display = 'block';
+      document.getElementById('selected-file-name').textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} م.ب)`;
+      document.getElementById('submit-upload').disabled = false;
+    }
+
+    document.getElementById('clear-file').addEventListener('click', () => {
+      selectedFile = null;
+      fileInput.value = '';
+      document.getElementById('selected-file').style.display = 'none';
+      document.getElementById('submit-upload').disabled = true;
+    });
+
+    document.getElementById('submit-upload').addEventListener('click', async () => {
+      if (!selectedFile || !courseId) return;
+
+      document.getElementById('upload-form').style.display = 'none';
+      document.getElementById('progress-view').style.display = 'block';
+      sayMascot('uploading');
+
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('courseId', courseId);
+      formData.append('sourceType', sourceType);
+
+      try {
+        const result = await api.uploadLecture(formData, (pct) => {
+          document.getElementById('upload-progress-fill').style.width = pct + '%';
+          document.getElementById('upload-progress-label').textContent = pct + '%';
+        });
+        lectureId = result.lectureId;
+        document.getElementById('progress-view').style.display = 'none';
+        watchLecture(lectureId);
+      } catch (err) {
+        showToast(err.message, 'error');
+        document.getElementById('upload-form').style.display = 'block';
+        document.getElementById('progress-view').style.display = 'none';
+      }
+    });
+
+    const STEP_ORDER = ['uploading', 'transcribing', 'analyzing', 'done'];
+
+    function updatePipeline(status) {
+      const pipeline = document.getElementById('status-pipeline');
+      pipeline.style.display = 'flex';
+      const currentIndex = STEP_ORDER.indexOf(status);
+
+      document.querySelectorAll('.status-step').forEach((el) => {
+        const idx = STEP_ORDER.indexOf(el.dataset.step);
+        el.classList.remove('active', 'done');
+        if (idx < currentIndex) el.classList.add('done');
+        else if (idx === currentIndex) el.classList.add('active');
+      });
+    }
+
+    function watchLecture(id) {
+      updatePipeline('uploading');
+      sayMascot('processing');
+
+      onSnapshot(doc(db, 'lectures', id), (snap) => {
+        if (!snap.exists()) return;
+        const data = snap.data();
+
+        if (data.processingStatus === 'error') {
+          document.getElementById('status-pipeline').style.display = 'none';
+          document.getElementById('error-view').style.display = 'block';
+          document.getElementById('error-message').textContent = data.errorMessage || 'صار خطأ غير متوقع.';
+          return;
+        }
+
+        updatePipeline(data.processingStatus);
+
+        if (data.processingStatus === 'done') {
+          sayMascot('done');
+          const btn = document.getElementById('view-summary-btn');
+          btn.style.display = 'block';
+          btn.href = `summary.html?id=${id}`;
+        }
+      });
+    }
+
+    document.getElementById('retry-btn').addEventListener('click', () => window.location.reload());
+
+    if (lectureId) {
+      document.getElementById('upload-form').style.display = 'none';
+      watchLecture(lectureId);
+    }
+  </script>
+</body>
+</html>

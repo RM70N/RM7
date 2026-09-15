@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>غرفة السباق — لخّصلي</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .room-code {
+      font-size: 34px;
+      font-weight: 900;
+      letter-spacing: 6px;
+      text-align: center;
+      color: var(--primary);
+      margin: 16px 0;
+    }
+    .leaderboard-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      background: var(--surface-alt);
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .leaderboard-row.me {
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      font-weight: 700;
+    }
+    .leaderboard-row .rank {
+      color: var(--text-muted);
+      margin-inline-end: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div id="nav-root"></div>
+
+  <main class="container" style="max-width: 480px; padding: 32px 20px 100px">
+    <h1 style="text-align:center">🏁 غرفة السباق</h1>
+
+    <!-- شاشة البداية: إنشاء أو انضمام -->
+    <div id="entry-view" class="card" hidden>
+      <div class="field">
+        <label>عندك رمز غرفة؟ اكتبه هنا للانضمام</label>
+        <input type="text" id="join-code" maxlength="5" placeholder="ABCDE" style="text-transform:uppercase" />
+      </div>
+      <button class="btn btn-primary btn-block" id="join-btn">انضم للسباق</button>
+    </div>
+
+    <!-- غرفة الانتظار -->
+    <div id="waiting-view" style="display:none">
+      <div class="card">
+        <p class="text-muted" style="text-align:center">شارك هذا الرمز مع أصدقائك</p>
+        <div class="room-code" id="room-code"></div>
+      </div>
+      <h3 style="margin-top:24px">المشاركون</h3>
+      <div id="participants-list"></div>
+      <button class="btn btn-accent btn-block" id="start-btn" style="margin-top:20px; display:none">ابدأ السباق!</button>
+      <p class="text-muted" id="waiting-note" style="text-align:center; margin-top:12px">بانتظار المضيف يبدأ السباق...</p>
+    </div>
+
+    <!-- السباق النشط -->
+    <div id="race-view" style="display:none">
+      <div class="card">
+        <h3 id="race-q-text" style="margin-bottom:16px"></h3>
+        <div id="race-q-options"></div>
+      </div>
+      <h3 style="margin-top:24px">🏆 الترتيب الحي</h3>
+      <div id="leaderboard"></div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { ref, onValue, set } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js';
+    import { rtdb } from './js/firebase-config.js';
+    import { requireUser } from './js/auth.js';
+    import { renderNav } from './js/nav.js';
+    import { api } from './js/api.js';
+    import { showToast } from './js/ui.js';
+
+    const user = await requireUser();
+    renderNav(user, '');
+
+    const params = new URLSearchParams(location.search);
+    let roomId = params.get('roomId');
+    const lectureId = params.get('lectureId');
+
+    async function goToRoom(id) {
+      roomId = id;
+      history.replaceState(null, '', `race-room.html?roomId=${id}`);
+      await enterRoom(id);
+    }
+
+    if (!roomId && lectureId) {
+      try {
+        const { id } = await api.post('/api/race-rooms', { lectureId });
+        await goToRoom(id);
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    } else if (roomId) {
+      await enterRoom(roomId);
+    } else {
+      document.getElementById('entry-view').hidden = false;
+    }
+
+    document.getElementById('join-btn').addEventListener('click', async () => {
+      const code = document.getElementById('join-code').value.trim();
+      if (!code) return;
+      try {
+        const { id } = await api.post('/api/race-rooms/join-by-code', { code });
+        document.getElementById('entry-view').hidden = true;
+        await goToRoom(id);
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+
+    let room = null;
+    let myScore = 0;
+
+    async function enterRoom(id) {
+      try {
+        room = await api.get(`/api/race-rooms/${id}`);
+      } catch (err) {
+        showToast(err.message, 'error');
+        return;
+      }
+
+      document.getElementById('waiting-view').style.display = 'block';
+      document.getElementById('room-code').textContent = room.code;
+      if (room.hostUserId === user.uid) {
+        document.getElementById('start-btn').style.display = 'block';
+        document.getElementById('waiting-note').style.display = 'none';
+      }
+
+      document.getElementById('start-btn').addEventListener('click', async () => {
+        try {
+          await api.post(`/api/race-rooms/${id}/start`);
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      });
+
+      onValue(ref(rtdb, `raceRooms/${id}/participants`), (snap) => {
+        const data = snap.val() || {};
+        renderParticipants(data);
+        renderLeaderboard(data);
+        if (data[user.uid]) myScore = data[user.uid].score || 0;
+      });
+
+      onValue(ref(rtdb, `raceRooms/${id}/status`), (snap) => {
+        if (snap.val() === 'active') {
+          document.getElementById('waiting-view').style.display = 'none';
+          document.getElementById('race-view').style.display = 'block';
+          loadQuestions(id);
+        }
+      });
+    }
+
+    function renderParticipants(data) {
+      const list = document.getElementById('participants-list');
+      list.innerHTML = Object.keys(data)
+        .map((uid) => `<div class="badge" style="margin:4px">${uid === user.uid ? 'أنت' : 'مشارك'}</div>`)
+        .join('');
+    }
+
+    function renderLeaderboard(data) {
+      const board = document.getElementById('leaderboard');
+      if (!board) return;
+      const sorted = Object.entries(data).sort((a, b) => (b[1].score || 0) - (a[1].score || 0));
+      board.innerHTML = sorted
+        .map(
+          ([uid, p], i) =>
+            `<div class="leaderboard-row ${uid === user.uid ? 'me' : ''}"><span><span class="rank">#${i + 1}</span>${
+              uid === user.uid ? 'أنت' : 'مشارك'
+            }</span><span>${p.score || 0}</span></div>`
+        )
+        .join('');
+    }
+
+    let questions = [];
+    let qIndex = 0;
+
+    function loadQuestions(id) {
+      onValue(
+        ref(rtdb, `raceRooms/${id}/questions`),
+        (snap) => {
+          questions = snap.val() || [];
+          renderQuestion(id);
+        },
+        { onlyOnce: true }
+      );
+    }
+
+    function renderQuestion(id) {
+      if (qIndex >= questions.length) {
+        document.getElementById('race-q-text').textContent = 'خلصت الأسئلة! شوف ترتيبك بالأسفل 🎉';
+        document.getElementById('race-q-options').innerHTML = '';
+        return;
+      }
+      const q = questions[qIndex];
+      document.getElementById('race-q-text').textContent = q.question;
+      const optsWrap = document.getElementById('race-q-options');
+      optsWrap.innerHTML = '';
+      q.options.forEach((opt, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'quiz-option';
+        btn.textContent = opt;
+        btn.addEventListener('click', async () => {
+          document.querySelectorAll('#race-q-options .quiz-option').forEach((b) => (b.disabled = true));
+          if (i === q.correctAnswerIndex) {
+            btn.classList.add('correct');
+            myScore += 10;
+            await set(ref(rtdb, `raceRooms/${id}/participants/${user.uid}`), {
+              score: myScore,
+              streak: 0,
+              joinedAt: Date.now(),
+            });
+          } else {
+            btn.classList.add('wrong');
+          }
+          setTimeout(() => {
+            qIndex += 1;
+            renderQuestion(id);
+          }, 700);
+        });
+        optsWrap.appendChild(btn);
+      });
+    }
+  </script>
+</body>
+</html>

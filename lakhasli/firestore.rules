@@ -1,0 +1,42 @@
+rules_version = '2';
+
+// كل الكتابة (إنشاء/تعديل/حذف) تمر عبر سيرفر الباك إند فقط (Firebase Admin SDK
+// يتجاوز هذه القواعد). الواجهة تُستخدم فقط للقراءة الحية (onSnapshot) لمتابعة
+// حالة معالجة المحاضرة، وكل قراءة مقيّدة بصاحب البيانات (userId == uid).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false;
+    }
+
+    match /courses/{courseId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /lectures/{lectureId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /studySessions/{sessionId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /raceRooms/{roomId} {
+      allow read: if request.auth != null &&
+        (resource.data.hostUserId == request.auth.uid ||
+         request.auth.uid in resource.data.participants);
+      allow write: if false;
+    }
+
+    match /comparisons/{comparisonId} {
+      allow read: if request.auth != null &&
+        get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.userId == request.auth.uid;
+      allow write: if false;
+    }
+  }
+}

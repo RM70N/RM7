@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>المقرر — لخّصلي</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .status-tag {
+      font-size: 12px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-weight: 700;
+    }
+    .status-done { background: var(--quoted-bg); color: var(--quoted); }
+    .status-error { background: var(--gap-bg); color: var(--gap); }
+    .status-progress { background: var(--inferred-bg); color: var(--inferred); }
+    .phrase-chip {
+      display: inline-block;
+      padding: 4px 10px;
+      margin: 3px;
+      border-radius: 999px;
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div id="nav-root"></div>
+
+  <main class="container" style="padding: 32px 20px 100px">
+    <a href="dashboard.html" class="text-muted">← رجوع للوحة التحكم</a>
+
+    <div class="flex justify-between items-center gap-12" style="margin: 16px 0 24px; flex-wrap:wrap">
+      <div>
+        <h1 id="course-name" style="margin-bottom:4px">...</h1>
+        <p class="text-muted" id="professor-name"></p>
+      </div>
+      <a id="upload-btn" href="#" class="btn btn-primary">+ رفع محاضرة</a>
+    </div>
+
+    <div class="card" id="fingerprint-card" style="margin-bottom:24px" hidden>
+      <h3>🖋️ بصمة الأستاذ</h3>
+      <p class="text-muted" style="margin-bottom:10px">عبارات يكررها الأستاذ كثيرًا — نعطيها وزن أعلى بالملخصات القادمة.</p>
+      <div id="phrases"></div>
+    </div>
+
+    <div class="card" id="compare-card" style="margin-bottom:24px" hidden>
+      <h3>🔍 قارن بين محاضرتين</h3>
+      <p class="text-muted" style="margin-bottom:12px">نستخرج التكرار والتناقض بينهما.</p>
+      <div class="grid grid-2">
+        <select class="field" id="compare-a"></select>
+        <select class="field" id="compare-b"></select>
+      </div>
+      <button class="btn btn-outline btn-block" id="compare-btn" style="margin-top:8px">قارن</button>
+      <div id="compare-result" style="margin-top:16px"></div>
+    </div>
+
+    <h2>المحاضرات</h2>
+    <div id="lectures-list" class="grid grid-2"></div>
+    <div id="empty-state" class="empty-state" hidden>
+      <p style="font-size:40px">🎙️</p>
+      <p>ما رفعت أي محاضرة بهذا المقرر بعد.</p>
+    </div>
+  </main>
+
+  <script type="module">
+    import { requireUser } from './js/auth.js';
+    import { renderNav } from './js/nav.js';
+    import { api } from './js/api.js';
+    import { showToast, watchOfflineState, escapeHtml } from './js/ui.js';
+
+    watchOfflineState();
+    const user = await requireUser();
+    renderNav(user, 'course.html');
+
+    const courseId = new URLSearchParams(location.search).get('id');
+    if (!courseId) window.location.href = 'dashboard.html';
+
+    document.getElementById('upload-btn').href = `upload.html?courseId=${courseId}`;
+
+    const STATUS_LABEL = {
+      uploading: 'جارٍ الرفع', transcribing: 'جارٍ التفريغ', analyzing: 'جارٍ التحليل', done: 'جاهزة', error: 'صار خطأ',
+    };
+
+    function statusClass(status) {
+      if (status === 'done') return 'status-done';
+      if (status === 'error') return 'status-error';
+      return 'status-progress';
+    }
+
+    async function load() {
+      try {
+        const course = await api.get(`/api/courses/${courseId}`);
+        document.getElementById('course-name').textContent = course.courseName;
+        document.getElementById('professor-name').textContent = course.professorName || '';
+
+        const phrases = course.professorFingerprint?.repeatedPhrases || [];
+        if (phrases.length) {
+          document.getElementById('fingerprint-card').hidden = false;
+          document.getElementById('phrases').innerHTML = phrases
+            .slice(0, 15)
+            .map((p) => `<span class="phrase-chip">${escapeHtml(p.phrase)} × ${p.count}</span>`)
+            .join('');
+        }
+
+        const lectures = await api.get(`/api/courses/${courseId}/lectures`);
+        const list = document.getElementById('lectures-list');
+        const empty = document.getElementById('empty-state');
+
+        if (!lectures.length) {
+          empty.hidden = false;
+          list.innerHTML = '';
+          return;
+        }
+        empty.hidden = true;
+
+        list.innerHTML = lectures
+          .map((l) => {
+            const href = l.processingStatus === 'done' ? `summary.html?id=${l.id}` : `upload.html?lectureId=${l.id}`;
+            return `
+            <a class="card card-link" href="${href}">
+              <div class="flex justify-between items-center">
+                <strong>${escapeHtml(l.originalFileName || 'محاضرة')}</strong>
+                <span class="status-tag ${statusClass(l.processingStatus)}">${STATUS_LABEL[l.processingStatus] || l.processingStatus}</span>
+              </div>
+              ${l.processingStatus === 'error' ? `<p class="text-muted" style="color:var(--danger); margin-top:8px">${escapeHtml(l.errorMessage || '')}</p>` : ''}
+            </a>`;
+          })
+          .join('');
+
+        const done = lectures.filter((l) => l.processingStatus === 'done');
+        if (done.length >= 2) {
+          document.getElementById('compare-card').hidden = false;
+          const options = done.map((l) => `<option value="${l.id}">${escapeHtml(l.originalFileName || 'محاضرة')}</option>`).join('');
+          document.getElementById('compare-a').innerHTML = options;
+          document.getElementById('compare-b').innerHTML = options;
+          document.getElementById('compare-b').selectedIndex = 1;
+        }
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    document.getElementById('compare-btn').addEventListener('click', async () => {
+      const lectureIdA = document.getElementById('compare-a').value;
+      const lectureIdB = document.getElementById('compare-b').value;
+      if (!lectureIdA || !lectureIdB || lectureIdA === lectureIdB) {
+        return showToast('اختر محاضرتين مختلفتين.', 'error');
+      }
+      const resultBox = document.getElementById('compare-result');
+      resultBox.innerHTML = '<p class="text-muted">جارٍ المقارنة...</p>';
+      try {
+        const { conflicts } = await api.post(`/api/courses/${courseId}/compare`, { lectureIdA, lectureIdB });
+        resultBox.innerHTML = conflicts.length
+          ? conflicts.map((c) => `<div class="gap-marker" style="margin-bottom:8px"><strong>${escapeHtml(c.topic)}:</strong> ${escapeHtml(c.note)}</div>`).join('')
+          : '<p class="text-muted">ما لقينا أي تكرار أو تناقض واضح بينهما.</p>';
+      } catch (err) {
+        showToast(err.message, 'error');
+        resultBox.innerHTML = '';
+      }
+    });
+
+    load();
+  </script>
+</body>
+</html>

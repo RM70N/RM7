@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ملفي الشخصي — لخّصلي</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .profile-header {
+      text-align: center;
+      padding: 30px 0;
+    }
+    .avatar-big {
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 34px;
+      font-weight: 900;
+      margin: 0 auto 12px;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-around;
+      text-align: center;
+      margin: 20px 0;
+    }
+    .stat-row .num {
+      font-size: 26px;
+      font-weight: 900;
+      color: var(--primary);
+    }
+    .pride-card {
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff;
+      text-align: center;
+      padding: 30px 20px;
+    }
+    .pride-card .num {
+      font-size: 30px;
+      font-weight: 900;
+    }
+    .theme-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .theme-option {
+      text-align: center;
+      padding: 14px 8px;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border);
+      cursor: pointer;
+    }
+    .theme-option.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+    }
+    .theme-option .emoji { font-size: 28px; }
+  </style>
+</head>
+<body>
+  <div id="nav-root"></div>
+
+  <main class="container" style="max-width: 560px; padding: 12px 20px 100px">
+    <div class="profile-header">
+      <div class="avatar-big" id="avatar"></div>
+      <h2 id="p-name"></h2>
+      <p class="text-muted" id="p-email"></p>
+    </div>
+
+    <div class="card">
+      <div class="stat-row">
+        <div><div class="num" id="p-points">0</div><div class="text-muted">نقطة</div></div>
+        <div><div class="num" id="p-streak">0</div><div class="text-muted">يوم متواصل 🔥</div></div>
+        <div><div class="num" id="p-level">1</div><div class="text-muted">المستوى</div></div>
+      </div>
+    </div>
+
+    <div class="card pride-card" style="margin-top:20px">
+      <p style="opacity:.9">✨ لحظة الفخر الأسبوعية</p>
+      <p class="num" id="pride-sessions">0</p>
+      <p style="opacity:.9">جلسة مراجعة هالأسبوع</p>
+      <p style="margin-top:10px" id="pride-detail"></p>
+    </div>
+
+    <div class="card" style="margin-top:20px">
+      <h3>🎨 الإطارات والثيمات</h3>
+      <p class="text-muted">اشترِها من متجر التركيز بنقاطك.</p>
+      <div class="theme-grid" id="theme-grid"></div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { requireUser } from './js/auth.js';
+    import { renderNav } from './js/nav.js';
+    import { api } from './js/api.js';
+    import { showToast } from './js/ui.js';
+    import { THEMES } from './js/gamification.js';
+
+    const user = await requireUser();
+    renderNav(user, 'profile.html');
+
+    document.getElementById('p-name').textContent = user.displayName || 'طالب لخّصلي';
+    document.getElementById('p-email').textContent = user.email || '';
+    document.getElementById('avatar').textContent = (user.displayName || user.email || '؟')[0].toUpperCase();
+
+    try {
+      const profile = await api.get('/api/users/me');
+      document.getElementById('p-points').textContent = profile.points || 0;
+      document.getElementById('p-streak').textContent = profile.streakCount || 0;
+      document.getElementById('p-level').textContent = profile.level || 1;
+
+      const grid = document.getElementById('theme-grid');
+      grid.innerHTML = THEMES.map(
+        (t) => `
+        <div class="theme-option ${profile.activeFrame === t.id ? 'active' : ''}" data-id="${t.id}">
+          <div class="emoji">${t.preview}</div>
+          <div style="font-size:13px">${t.name}</div>
+          <div class="text-muted" style="font-size:12px">${(profile.unlockedThemes || []).includes(t.id) ? 'مفتوح' : '🔒'}</div>
+        </div>`
+      ).join('');
+
+      grid.querySelectorAll('.theme-option').forEach((el) => {
+        el.addEventListener('click', async () => {
+          if (!(profile.unlockedThemes || []).includes(el.dataset.id)) {
+            return showToast('افتح هذا الثيم أولًا من متجر التركيز', 'error');
+          }
+          try {
+            await api.post('/api/users/me/active-frame', { frameId: el.dataset.id });
+            grid.querySelectorAll('.theme-option').forEach((o) => o.classList.remove('active'));
+            el.classList.add('active');
+          } catch (err) {
+            showToast(err.message, 'error');
+          }
+        });
+      });
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+
+    try {
+      const summary = await api.get('/api/users/me/weekly-summary');
+      document.getElementById('pride-sessions').textContent = summary.sessionsCount;
+      document.getElementById('pride-detail').textContent = `راجعت ${summary.lecturesStudied} محاضرة، وقضيت ${summary.totalTimeMinutes} دقيقة بالمذاكرة 👏`;
+    } catch {
+      /* تجاهل */
+    }
+  </script>
+</body>
+</html>

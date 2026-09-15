@@ -1,0 +1,24 @@
+{
+  "rules": {
+    "raceRooms": {
+      "$roomId": {
+        ".read": "auth != null && data.child('participants').child(auth.uid).exists()",
+        "status": {
+          ".read": "auth != null && data.parent().child('participants').child(auth.uid).exists()"
+        },
+        "currentQuestionIndex": {
+          ".read": "auth != null && data.parent().child('participants').child(auth.uid).exists()"
+        },
+        "participants": {
+          ".read": "auth != null && data.child(auth.uid).exists()",
+          "$uid": {
+            ".write": "auth != null && auth.uid == $uid && data.parent().parent().child('status').val() == 'active'",
+            ".validate": "newData.hasChildren(['score', 'streak'])",
+            "score": { ".validate": "newData.isNumber()" },
+            "streak": { ".validate": "newData.isNumber()" }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>متجر التركيز — لخّصلي</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .shop-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 16px;
+    }
+    .shop-item {
+      text-align: center;
+    }
+    .shop-item .emoji {
+      font-size: 40px;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div id="nav-root"></div>
+
+  <main class="container" style="padding: 32px 20px 100px">
+    <h1>🛍️ متجر التركيز</h1>
+    <p class="text-muted" style="margin-bottom:24px">افتح ثيمات وإطارات جديدة بنقاطك من المذاكرة اليومية.</p>
+
+    <div class="shop-grid" id="shop-grid"></div>
+  </main>
+
+  <script type="module">
+    import { requireUser } from './js/auth.js';
+    import { renderNav } from './js/nav.js';
+    import { api } from './js/api.js';
+    import { showToast } from './js/ui.js';
+    import { THEMES } from './js/gamification.js';
+
+    const user = await requireUser();
+    renderNav(user, 'shop.html');
+
+    let profile = null;
+
+    async function load() {
+      profile = await api.get('/api/users/me');
+      const grid = document.getElementById('shop-grid');
+      grid.innerHTML = THEMES.filter((t) => t.cost > 0)
+        .map((t) => {
+          const owned = (profile.unlockedThemes || []).includes(t.id);
+          return `
+          <div class="card shop-item">
+            <div class="emoji">${t.preview}</div>
+            <h3>${t.name}</h3>
+            <p class="badge" style="margin-bottom:10px">⭐ ${t.cost}</p>
+            <button class="btn ${owned ? 'btn-ghost' : 'btn-primary'} btn-block" data-id="${t.id}" ${owned ? 'disabled' : ''}>
+              ${owned ? 'تم الشراء ✓' : 'شراء'}
+            </button>
+          </div>`;
+        })
+        .join('');
+
+      grid.querySelectorAll('button[data-id]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          try {
+            await api.post('/api/users/me/unlock-theme', { themeId: btn.dataset.id });
+            showToast('تم فتح الثيم! 🎉');
+            load();
+          } catch (err) {
+            showToast(err.message, 'error');
+          }
+        });
+      });
+    }
+
+    load().catch((err) => showToast(err.message, 'error'));
+  </script>
+</body>
+</html>

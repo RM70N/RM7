@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>اختبار سريع — لخّصلي</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .quiz-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    .quiz-progress {
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+    .streak-line {
+      text-align: center;
+      margin-bottom: 12px;
+      font-weight: 700;
+      color: var(--accent);
+      min-height: 24px;
+    }
+    .result-emoji {
+      font-size: 60px;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div id="nav-root"></div>
+
+  <main class="container" style="max-width: 560px; padding: 32px 20px 100px">
+    <a href="#" id="back-link" class="text-muted">← رجوع للملخص</a>
+
+    <div id="intro-view" style="text-align:center; padding: 60px 0">
+      <p style="font-size:50px">⚡</p>
+      <h1>معركة الأسئلة</h1>
+      <p class="text-muted">عندك 60 ثانية عشان تجاوب أكبر عدد من الأسئلة. جاهز؟</p>
+      <button class="btn btn-primary" id="start-btn" style="margin-top:20px">ابدأ!</button>
+    </div>
+
+    <div id="quiz-view" style="display:none">
+      <div class="quiz-header">
+        <span class="quiz-progress" id="q-progress"></span>
+        <span class="quiz-timer" id="timer">60</span>
+      </div>
+      <div class="streak-line" id="streak-line"></div>
+      <div class="card">
+        <h3 id="q-text" style="margin-bottom:16px"></h3>
+        <div id="q-options"></div>
+      </div>
+    </div>
+
+    <div id="result-view" style="display:none; text-align:center; padding: 40px 0">
+      <div class="result-emoji" id="result-emoji"></div>
+      <h1 id="result-score"></h1>
+      <p class="text-muted" id="result-note"></p>
+      <div class="flex gap-12" style="margin-top:24px">
+        <button class="btn btn-outline btn-block" id="retry-quiz">حاول مرة ثانية</button>
+        <a href="#" class="btn btn-primary btn-block" id="back-summary">رجوع للملخص</a>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { requireUser } from './js/auth.js';
+    import { renderNav } from './js/nav.js';
+    import { api } from './js/api.js';
+    import { showToast } from './js/ui.js';
+    import { sayMascot } from './js/gamification.js';
+
+    const user = await requireUser();
+    renderNav(user, '');
+
+    const lectureId = new URLSearchParams(location.search).get('id');
+    if (!lectureId) window.location.href = 'dashboard.html';
+    document.getElementById('back-link').href = `summary.html?id=${lectureId}`;
+    document.getElementById('back-summary').href = `summary.html?id=${lectureId}`;
+
+    let questions = [];
+    try {
+      const lecture = await api.get(`/api/lectures/${lectureId}`);
+      questions = lecture.quizQuestions || [];
+      if (!questions.length) {
+        document.getElementById('intro-view').innerHTML = '<p class="text-muted">ما فيه أسئلة متاحة لهذه المحاضرة بعد.</p>';
+      }
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+
+    let qIndex = 0;
+    let score = 0;
+    let attempted = 0;
+    let correctStreak = 0;
+    let timeLeft = 60;
+    let timerHandle = null;
+    let startedAt = 0;
+    let answered = false;
+
+    document.getElementById('start-btn').addEventListener('click', startQuiz);
+    document.getElementById('retry-quiz').addEventListener('click', () => window.location.reload());
+
+    function shuffledQuestions() {
+      return [...questions].sort(() => Math.random() - 0.5);
+    }
+
+    function startQuiz() {
+      questions = shuffledQuestions();
+      qIndex = 0;
+      score = 0;
+      attempted = 0;
+      correctStreak = 0;
+      timeLeft = 60;
+      startedAt = Date.now();
+
+      document.getElementById('intro-view').style.display = 'none';
+      document.getElementById('quiz-view').style.display = 'block';
+      sayMascot('quizStart');
+
+      timerHandle = setInterval(() => {
+        timeLeft -= 1;
+        document.getElementById('timer').textContent = timeLeft;
+        if (timeLeft <= 0) endQuiz();
+      }, 1000);
+
+      renderQuestion();
+    }
+
+    function renderQuestion() {
+      answered = false;
+      if (qIndex >= questions.length) {
+        qIndex = 0; // نعيد الدورة لو خلّص الأسئلة قبل الوقت
+      }
+      const q = questions[qIndex];
+      document.getElementById('q-progress').textContent = `سؤال ${qIndex + 1} من ${questions.length}`;
+      document.getElementById('q-text').textContent = q.question;
+
+      const optsWrap = document.getElementById('q-options');
+      optsWrap.innerHTML = '';
+      q.options.forEach((opt, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'quiz-option';
+        btn.textContent = opt;
+        btn.addEventListener('click', () => selectAnswer(i));
+        optsWrap.appendChild(btn);
+      });
+    }
+
+    function selectAnswer(i) {
+      if (answered || timeLeft <= 0) return;
+      answered = true;
+      attempted += 1;
+      const q = questions[qIndex];
+      const buttons = document.querySelectorAll('.quiz-option');
+      buttons[i].classList.add(i === q.correctAnswerIndex ? 'correct' : 'wrong');
+      if (i !== q.correctAnswerIndex) buttons[q.correctAnswerIndex].classList.add('correct');
+
+      if (i === q.correctAnswerIndex) {
+        score += 1;
+        correctStreak += 1;
+        sayMascot('quizGood');
+      } else {
+        correctStreak = 0;
+        sayMascot('quizBad');
+      }
+      document.getElementById('streak-line').textContent = correctStreak >= 2 ? `🔥 ${correctStreak} صح متتالية!` : '';
+
+      setTimeout(() => {
+        qIndex += 1;
+        if (timeLeft > 0) renderQuestion();
+      }, 700);
+    }
+
+    async function endQuiz() {
+      clearInterval(timerHandle);
+      document.getElementById('quiz-view').style.display = 'none';
+      document.getElementById('result-view').style.display = 'block';
+
+      document.getElementById('result-emoji').textContent = attempted && score >= attempted * 0.7 ? '🎉' : '💪';
+      document.getElementById('result-score').textContent = `${score} / ${attempted} صحيحة`;
+
+      const timeSpent = Math.round((Date.now() - startedAt) / 1000);
+
+      try {
+        const result = await api.post('/api/study-sessions', {
+          lectureId,
+          score,
+          totalQuestions: Math.max(attempted, 1),
+          timeSpent,
+        });
+        document.getElementById('result-note').textContent = result.passed
+          ? `🔥 سلسلتك الحين ${result.streakCount} يوم! +10 نقاط`
+          : 'جاوب 3 أسئلة صح على الأقل عشان تكمّل سلسلتك اليومية.';
+      } catch {
+        document.getElementById('result-note').textContent = '';
+      }
+    }
+  </script>
+</body>
+</html>

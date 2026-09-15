@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>تسجيل الدخول — لخّصلي</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .auth-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .auth-card {
+      width: 100%;
+      max-width: 380px;
+    }
+    .auth-logo {
+      text-align: center;
+      font-size: 26px;
+      font-weight: 900;
+      color: var(--primary);
+      margin-bottom: 24px;
+    }
+    .auth-toggle {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .auth-toggle button {
+      flex: 1;
+      padding: 10px;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--text-muted);
+      font-family: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .auth-toggle button.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 16px 0;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+    #form-error {
+      color: var(--danger);
+      font-size: 14px;
+      margin-bottom: 12px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-wrap">
+    <div class="card auth-card">
+      <div class="auth-logo">لخّصلي 📚</div>
+
+      <div class="auth-toggle">
+        <button type="button" id="tab-login" class="active">تسجيل الدخول</button>
+        <button type="button" id="tab-signup">حساب جديد</button>
+      </div>
+
+      <div id="form-error"></div>
+
+      <form id="auth-form">
+        <div class="field" id="name-field" hidden>
+          <label>الاسم</label>
+          <input type="text" id="name" autocomplete="name" />
+        </div>
+        <div class="field">
+          <label>البريد الإلكتروني</label>
+          <input type="email" id="email" required autocomplete="email" />
+        </div>
+        <div class="field">
+          <label>كلمة المرور</label>
+          <input type="password" id="password" required autocomplete="current-password" minlength="6" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="submit-btn">تسجيل الدخول</button>
+      </form>
+
+      <div class="divider">أو</div>
+      <button type="button" class="btn btn-outline btn-block" id="google-btn">تسجيل الدخول عبر جوجل</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { loginWithEmail, signupWithEmail, loginWithGoogle, watchAuth, authErrorToArabic } from './js/auth.js';
+
+    const params = new URLSearchParams(location.search);
+    let mode = params.get('signup') ? 'signup' : 'login';
+
+    const tabLogin = document.getElementById('tab-login');
+    const tabSignup = document.getElementById('tab-signup');
+    const nameField = document.getElementById('name-field');
+    const submitBtn = document.getElementById('submit-btn');
+    const errorBox = document.getElementById('form-error');
+
+    function applyMode() {
+      tabLogin.classList.toggle('active', mode === 'login');
+      tabSignup.classList.toggle('active', mode === 'signup');
+      nameField.hidden = mode !== 'signup';
+      submitBtn.textContent = mode === 'signup' ? 'إنشاء الحساب' : 'تسجيل الدخول';
+    }
+    applyMode();
+
+    tabLogin.addEventListener('click', () => { mode = 'login'; applyMode(); });
+    tabSignup.addEventListener('click', () => { mode = 'signup'; applyMode(); });
+
+    function showError(msg) {
+      errorBox.textContent = msg;
+      errorBox.style.display = 'block';
+    }
+
+    document.getElementById('auth-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorBox.style.display = 'none';
+      submitBtn.disabled = true;
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const name = document.getElementById('name').value.trim();
+
+      try {
+        if (mode === 'signup') {
+          await signupWithEmail(name, email, password);
+        } else {
+          await loginWithEmail(email, password);
+        }
+      } catch (err) {
+        showError(authErrorToArabic(err));
+        submitBtn.disabled = false;
+      }
+    });
+
+    document.getElementById('google-btn').addEventListener('click', async () => {
+      errorBox.style.display = 'none';
+      try {
+        await loginWithGoogle();
+      } catch (err) {
+        showError(authErrorToArabic(err));
+      }
+    });
+
+    watchAuth((user) => {
+      if (user) window.location.href = 'dashboard.html';
+    });
+  </script>
+</body>
+</html>

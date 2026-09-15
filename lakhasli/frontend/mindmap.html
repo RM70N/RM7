@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>الخريطة الذهنية — لخّصلي</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="nav-root"></div>
+
+  <main class="container" style="max-width: 720px; padding: 32px 20px 100px">
+    <a href="#" id="back-link" class="text-muted">← رجوع للملخص</a>
+    <h1 style="margin: 16px 0">🧠 الخريطة الذهنية</h1>
+    <p class="text-muted">اضغط "وضّح أكثر" أو "أعطني مثال" على أي فرع لتوسيعه فورًا بمساعدة الذكاء الاصطناعي.</p>
+
+    <div class="mindmap card" id="mindmap-root"></div>
+  </main>
+
+  <script type="module">
+    import { requireUser } from './js/auth.js';
+    import { renderNav } from './js/nav.js';
+    import { api } from './js/api.js';
+    import { showToast } from './js/ui.js';
+
+    const user = await requireUser();
+    renderNav(user, '');
+
+    const lectureId = new URLSearchParams(location.search).get('id');
+    if (!lectureId) window.location.href = 'dashboard.html';
+    document.getElementById('back-link').href = `summary.html?id=${lectureId}`;
+
+    function buildNode(node, isRoot = false) {
+      const wrap = document.createElement('div');
+      wrap.className = 'mm-node';
+
+      const titleRow = document.createElement('div');
+      titleRow.className = 'mm-title' + (isRoot ? ' root' : '');
+      titleRow.textContent = node.title;
+      wrap.appendChild(titleRow);
+
+      const childrenWrap = document.createElement('div');
+      wrap.appendChild(childrenWrap);
+
+      (node.children || []).forEach((child) => childrenWrap.appendChild(buildNode(child)));
+
+      if (!isRoot) {
+        const actions = document.createElement('div');
+        actions.className = 'mm-actions';
+        actions.innerHTML = `<button data-action="clarify">وضّح أكثر</button> · <button data-action="example">أعطني مثال</button>`;
+        wrap.appendChild(actions);
+
+        actions.querySelectorAll('button').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            btn.textContent = 'جارٍ التوليد...';
+            try {
+              const { children } = await api.post(`/api/lectures/${lectureId}/expand-node`, {
+                nodeTitle: node.title,
+                requestType: btn.dataset.action,
+              });
+              children.forEach((c) => childrenWrap.appendChild(buildNode(c)));
+            } catch (err) {
+              showToast(err.message, 'error');
+            } finally {
+              actions.remove();
+            }
+          });
+        });
+      }
+
+      return wrap;
+    }
+
+    try {
+      const lecture = await api.get(`/api/lectures/${lectureId}`);
+      const root = document.getElementById('mindmap-root');
+      if (!lecture.mindMapJson) {
+        root.innerHTML = '<p class="text-muted">ما فيه خريطة ذهنية متاحة لهذه المحاضرة.</p>';
+      } else {
+        root.appendChild(buildNode(lecture.mindMapJson, true));
+      }
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  </script>
+</body>
+</html>

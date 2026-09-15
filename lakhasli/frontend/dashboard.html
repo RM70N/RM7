@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>لوحة التحكم — لخّصلي</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="nav-root"></div>
+
+  <main class="container" style="padding: 32px 20px 100px">
+    <div class="flex justify-between items-center gap-12" style="margin-bottom: 24px; flex-wrap: wrap">
+      <div>
+        <h1 id="greeting" style="margin-bottom:4px">أهلًا 👋</h1>
+        <p class="text-muted" id="streak-line"></p>
+      </div>
+      <div class="flex gap-12">
+        <a href="race-room.html" class="btn btn-outline">🏁 انضم لسباق</a>
+        <button class="btn btn-primary" id="new-course-btn">+ مقرر جديد</button>
+      </div>
+    </div>
+
+    <div id="courses-grid" class="grid grid-3"></div>
+    <div id="empty-state" class="empty-state" hidden>
+      <p style="font-size:40px; margin-bottom:8px">📂</p>
+      <p>ما عندك أي مقرر بعد. أنشئ أول مقرر وابدأ برفع محاضراتك.</p>
+    </div>
+  </main>
+
+  <!-- نافذة مقرر جديد -->
+  <div id="modal-backdrop" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:60; align-items:center; justify-content:center">
+    <div class="card" style="width:100%; max-width:380px; margin:16px">
+      <h3>مقرر جديد</h3>
+      <div class="field">
+        <label>اسم المقرر</label>
+        <input type="text" id="course-name" placeholder="مثال: مبادئ البرمجة" />
+      </div>
+      <div class="field">
+        <label>اسم الأستاذ (اختياري)</label>
+        <input type="text" id="professor-name" />
+      </div>
+      <div class="flex gap-12">
+        <button class="btn btn-outline btn-block" id="cancel-course">إلغاء</button>
+        <button class="btn btn-primary btn-block" id="save-course">إنشاء</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireUser } from './js/auth.js';
+    import { renderNav } from './js/nav.js';
+    import { api } from './js/api.js';
+    import { showToast, watchOfflineState, escapeHtml } from './js/ui.js';
+    import { mountMascot, sayMascot } from './js/gamification.js';
+
+    watchOfflineState();
+
+    const user = await requireUser();
+    renderNav(user, 'dashboard.html');
+    mountMascot();
+
+    document.getElementById('greeting').textContent = `أهلًا ${user.displayName || 'بك'} 👋`;
+
+    async function loadCourses() {
+      try {
+        const courses = await api.get('/api/courses');
+        const grid = document.getElementById('courses-grid');
+        const empty = document.getElementById('empty-state');
+
+        if (!courses.length) {
+          empty.hidden = false;
+          grid.innerHTML = '';
+          sayMascot('welcome');
+          return;
+        }
+        empty.hidden = true;
+
+        grid.innerHTML = courses
+          .map(
+            (c) => `
+          <a class="card card-link" href="course.html?id=${c.id}">
+            <h3>${escapeHtml(c.courseName)}</h3>
+            <p class="text-muted">${escapeHtml(c.professorName || 'بدون اسم أستاذ')}</p>
+          </a>`
+          )
+          .join('');
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    try {
+      const profile = await api.get('/api/users/me');
+      document.getElementById('streak-line').textContent = profile.streakCount
+        ? `🔥 سلسلة مذاكرة: ${profile.streakCount} يوم متواصل`
+        : 'ابدأ اليوم أول سلسلة مذاكرة لك!';
+    } catch {
+      /* تجاهل */
+    }
+
+    loadCourses();
+
+    const backdrop = document.getElementById('modal-backdrop');
+    document.getElementById('new-course-btn').addEventListener('click', () => (backdrop.style.display = 'flex'));
+    document.getElementById('cancel-course').addEventListener('click', () => (backdrop.style.display = 'none'));
+
+    document.getElementById('save-course').addEventListener('click', async () => {
+      const courseName = document.getElementById('course-name').value.trim();
+      const professorName = document.getElementById('professor-name').value.trim();
+      if (!courseName) return showToast('اكتب اسم المقرر أولًا', 'error');
+
+      try {
+        await api.post('/api/courses', { courseName, professorName });
+        backdrop.style.display = 'none';
+        document.getElementById('course-name').value = '';
+        document.getElementById('professor-name').value = '';
+        loadCourses();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+  </script>
+</body>
+</html>
