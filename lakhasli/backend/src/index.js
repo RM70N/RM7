@@ -11,10 +11,23 @@ import { studySessionsRouter } from './routes/studySessions.js';
 
 const app = express();
 
-app.use(cors({ origin: env.frontendUrl }));
+// سجل كل طلب وارد (طريقة، مسار، أصل الطلب) — يساعد بتشخيص مشاكل CORS/الاتصال
+// عن بُعد لأنه يسجّل حتى الطلبات اللي يرفضها CORS قبل ما توصل للـroutes.
+app.use((req, res, next) => {
+  logger.info(`${req.method} ${req.path} — Origin: ${req.headers.origin || 'بدون'}`);
+  next();
+});
+
+app.use(
+  cors({
+    origin: env.frontendUrl,
+    methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 app.use(express.json());
 
-app.get('/health', (req, res) => res.json({ ok: true }));
+app.get('/health', (req, res) => res.json({ ok: true, frontendUrl: env.frontendUrl }));
 
 app.use('/api/lectures', lecturesRouter);
 app.use('/api/courses', coursesRouter);
