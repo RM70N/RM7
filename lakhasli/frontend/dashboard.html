@@ -5,15 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>لوحة التحكم — لخّصلي</title>
   <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .course-card .hue-bar { width: 34px; height: 6px; border-radius: 999px; margin-bottom: 16px; }
+    .course-card .foot { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line-2); display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--ink-3); }
+    .course-card .foot .open { color: var(--primary); font-weight: 600; }
+    #modal-backdrop { backdrop-filter: blur(6px); background: rgba(29,28,25,.44); }
+    #modal-backdrop .card { animation: scaleIn .3s var(--e) both; }
+  </style>
 </head>
 <body>
   <div id="nav-root"></div>
 
-  <main class="container" style="padding: 32px 20px 100px">
-    <div class="flex justify-between items-center gap-12" style="margin-bottom: 24px; flex-wrap: wrap">
-      <div>
-        <h1 id="greeting" style="margin-bottom:4px">أهلًا 👋</h1>
-        <p class="text-muted" id="streak-line"></p>
+  <main class="container" style="padding: 36px 24px 100px">
+    <div class="flex justify-between items-center gap-12" style="margin-bottom: 32px; flex-wrap: wrap">
+      <div style="animation:fadeUp .45s var(--e) both">
+        <h1 id="greeting" style="font-size:38px; margin-bottom:8px">أهلًا 👋</h1>
+        <p class="text-muted" id="streak-line" style="font-size:15.5px"></p>
       </div>
       <div class="flex gap-12">
         <a href="race-room.html" class="btn btn-outline">🏁 انضم لسباق</a>
@@ -23,15 +30,16 @@
 
     <div id="courses-grid" class="grid grid-3"></div>
     <div id="empty-state" class="empty-state" hidden>
-      <p style="font-size:40px; margin-bottom:8px">📂</p>
-      <p>ما عندك أي مقرر بعد. أنشئ أول مقرر وابدأ برفع محاضراتك.</p>
+      <p style="font-size:44px; margin-bottom:10px">📂</p>
+      <h3 style="margin:0 0 6px">ما عندك مقررات بعد</h3>
+      <p>أنشئ مقررك الأول وابدأ برفع أول محاضرة.</p>
     </div>
   </main>
 
   <!-- نافذة مقرر جديد -->
-  <div id="modal-backdrop" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:60; align-items:center; justify-content:center">
-    <div class="card" style="width:100%; max-width:380px; margin:16px">
-      <h3>مقرر جديد</h3>
+  <div id="modal-backdrop" style="display:none; position:fixed; inset:0; z-index:60; align-items:center; justify-content:center; padding:24px">
+    <div class="card" style="width:100%; max-width:400px; margin:16px; border-radius:var(--radius-lg); padding:28px">
+      <h3 style="font-size:26px">مقرر جديد</h3>
       <div class="field">
         <label>اسم المقرر</label>
         <input type="text" id="course-name" placeholder="مثال: مبادئ البرمجة" />
@@ -76,12 +84,15 @@
         }
         empty.hidden = true;
 
+        const hues = ['var(--primary)', 'var(--quoted)', 'var(--inferred)', 'var(--gap)'];
         grid.innerHTML = courses
           .map(
-            (c) => `
-          <a class="card card-link" href="course.html?id=${c.id}">
-            <h3>${escapeHtml(c.courseName)}</h3>
-            <p class="text-muted">${escapeHtml(c.professorName || 'بدون اسم أستاذ')}</p>
+            (c, i) => `
+          <a class="card card-link course-card" href="course.html?id=${c.id}">
+            <div class="hue-bar" style="background:${hues[i % hues.length]}"></div>
+            <h3 style="font-size:22px; margin:0 0 6px">${escapeHtml(c.courseName)}</h3>
+            <p class="text-muted" style="margin:0">${escapeHtml(c.professorName || 'بدون اسم أستاذ')}</p>
+            <div class="foot"><span>مقرر</span><span class="open">افتح ←</span></div>
           </a>`
           )
           .join('');

@@ -7,73 +7,79 @@
   <link rel="stylesheet" href="css/style.css" />
   <style>
     .dropzone {
-      border: 2.5px dashed var(--border);
+      background: var(--surface);
+      border: 1.5px dashed var(--line);
       border-radius: var(--radius-lg);
-      padding: 50px 20px;
+      padding: 52px 24px;
       text-align: center;
       cursor: pointer;
-      transition: border-color 0.15s ease, background 0.15s ease;
+      transition: all .25s var(--e);
     }
-    .dropzone.dragover {
+    .dropzone:hover, .dropzone.dragover {
       border-color: var(--primary);
-      background: var(--primary-light);
+      background: var(--primary-50);
+      transform: translateY(-2px);
     }
     .type-options {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
       gap: 10px;
-      flex-wrap: wrap;
       margin-bottom: 20px;
     }
     .type-option {
-      flex: 1;
-      min-width: 100px;
       text-align: center;
-      padding: 14px 10px;
-      border-radius: var(--radius-sm);
-      border: 1.5px solid var(--border);
+      padding: 16px 10px;
+      border-radius: 18px;
+      border: 1.5px solid var(--line);
+      background: var(--surface);
       cursor: pointer;
-      font-weight: 500;
+      transition: all .25s var(--e);
     }
+    .type-option:hover { transform: translateY(-2px); }
+    .type-option .emoji { font-size: 24px; }
+    .type-option .label { font-size: 14px; font-weight: 600; margin-top: 8px; color: var(--ink); }
     .type-option.active {
       border-color: var(--primary);
-      background: var(--primary-light);
-      color: var(--primary-dark);
-      font-weight: 700;
+      background: var(--primary-50);
     }
+    .type-option.active .label { color: var(--primary-700); }
     .progress-bar {
-      height: 10px;
-      border-radius: 6px;
-      background: var(--surface-alt);
+      height: 8px;
+      border-radius: 999px;
+      background: var(--line-2);
       overflow: hidden;
-      margin-top: 16px;
+      margin-top: 18px;
     }
     .progress-bar-fill {
       height: 100%;
-      background: var(--primary);
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--primary), var(--primary-700));
       width: 0%;
-      transition: width 0.2s ease;
+      transition: width 0.2s linear;
     }
+    #progress-view, #status-pipeline, #error-view { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--sh-2); }
   </style>
 </head>
 <body>
   <div id="nav-root"></div>
 
-  <main class="container" style="max-width: 560px; padding: 32px 20px 100px">
+  <main class="container" style="max-width: 620px; padding: 32px 24px 100px">
     <a href="#" id="back-link" class="text-muted">← رجوع للمقرر</a>
-    <h1 style="margin: 16px 0 24px">رفع محاضرة جديدة</h1>
+    <h1 style="font-size:32px; margin: 12px 0 6px">رفع محاضرة جديدة</h1>
+    <p class="text-muted" style="margin:0 0 22px">اختر نوع الملف، وخلّ الباقي علينا.</p>
 
     <div id="upload-form">
       <div class="type-options" id="type-options">
-        <div class="type-option active" data-type="audio">🎙️ صوت</div>
-        <div class="type-option" data-type="video">🎬 فيديو</div>
-        <div class="type-option" data-type="pdf">📄 PDF</div>
-        <div class="type-option" data-type="image">🖼️ صورة سبورة</div>
+        <div class="type-option active" data-type="audio"><div class="emoji">🎙️</div><div class="label">صوت</div></div>
+        <div class="type-option" data-type="video"><div class="emoji">🎬</div><div class="label">فيديو</div></div>
+        <div class="type-option" data-type="pdf"><div class="emoji">📄</div><div class="label">PDF</div></div>
+        <div class="type-option" data-type="image"><div class="emoji">🖼️</div><div class="label">صورة سبورة</div></div>
       </div>
 
       <div class="dropzone" id="dropzone">
-        <p style="font-size:38px; margin-bottom:8px" id="dz-icon">🎙️</p>
-        <p id="dz-text">اسحب الملف هنا أو اضغط للاختيار</p>
-        <p class="text-muted" id="dz-hint" style="font-size:13px; margin-top:6px"></p>
+        <p style="font-size:42px; margin-bottom:8px" id="dz-icon">🎙️</p>
+        <h3 style="font-size:23px; margin:14px 0 6px" id="dz-text">اسحب الملف هنا أو اضغط للاختيار</h3>
+        <p class="text-muted" id="dz-hint" style="font-size:14px; margin-top:4px"></p>
         <input type="file" id="file-input" hidden />
       </div>
 
@@ -89,20 +95,20 @@
 
     <!-- حالة الرفع والمعالجة -->
     <div id="progress-view" style="display:none">
+      <div class="flex justify-between" style="font-size:12.5px; color:var(--ink-2)"><span>جاري الرفع…</span><span id="upload-progress-label" style="font-weight:700; color:var(--primary-700)">0%</span></div>
       <div class="progress-bar"><div class="progress-bar-fill" id="upload-progress-fill"></div></div>
-      <p class="text-muted" style="text-align:center; margin-top:8px" id="upload-progress-label">0%</p>
     </div>
 
-    <div class="status-pipeline" id="status-pipeline" style="display:none">
-      <div class="status-step" data-step="uploading"><span class="dot"></span> رفع الملف</div>
-      <div class="status-step" data-step="transcribing"><span class="dot"></span> تفريغ المحتوى إلى نص</div>
-      <div class="status-step" data-step="analyzing"><span class="dot"></span> التحليل الذكي وتوليد الملخص</div>
-      <div class="status-step" data-step="done"><span class="dot"></span> جاهز!</div>
+    <div class="status-pipeline" id="status-pipeline" style="display:none; margin-top:20px">
+      <div class="status-step" data-step="uploading"><span class="dot">1</span><span class="label">رفع الملف</span></div>
+      <div class="status-step" data-step="transcribing"><span class="dot">2</span><span class="label">تفريغ المحتوى إلى نص</span></div>
+      <div class="status-step" data-step="analyzing"><span class="dot">3</span><span class="label">التحليل الذكي وتوليد الملخص</span></div>
+      <div class="status-step" data-step="done"><span class="dot">✓</span><span class="label">جاهز!</span></div>
     </div>
 
-    <div id="error-view" class="card" style="display:none; border-color:var(--danger); margin-top:20px">
-      <p style="color:var(--danger); font-weight:700" id="error-message"></p>
-      <button class="btn btn-outline btn-block" id="retry-btn" style="margin-top:12px">حاول مرة ثانية</button>
+    <div id="error-view" style="display:none; margin-top:20px">
+      <p style="color:var(--danger); font-weight:700; margin:0" id="error-message"></p>
+      <button class="btn btn-outline btn-block" id="retry-btn" style="margin-top:14px">حاول مرة ثانية</button>
     </div>
 
     <a id="view-summary-btn" href="#" class="btn btn-accent btn-block" style="display:none; margin-top:20px">شوف الملخص 🎉</a>

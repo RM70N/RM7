@@ -7,60 +7,73 @@
   <link rel="stylesheet" href="css/style.css" />
   <style>
     .status-tag {
-      font-size: 12px;
-      padding: 3px 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12.5px;
+      padding: 6px 13px;
       border-radius: 999px;
-      font-weight: 700;
+      font-weight: 600;
     }
+    .status-tag .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
     .status-done { background: var(--quoted-bg); color: var(--quoted); }
     .status-error { background: var(--gap-bg); color: var(--gap); }
     .status-progress { background: var(--inferred-bg); color: var(--inferred); }
+    .status-progress .dot { animation: softPulse 1.4s ease-in-out infinite; }
     .phrase-chip {
-      display: inline-block;
-      padding: 4px 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 8px 8px 14px;
       margin: 3px;
       border-radius: 999px;
-      background: var(--primary-light);
-      color: var(--primary-dark);
-      font-size: 13px;
+      background: var(--surface-2);
+      border: 1px solid var(--line-2);
+      font-size: 13.5px;
     }
+    .phrase-chip .n { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; font-size: 12px; font-weight: 700; color: var(--primary-700); }
+    .lecture-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 16px 20px; }
+    .lecture-row .icon { width: 38px; height: 38px; border-radius: 12px; background: var(--primary-50); display: grid; place-items: center; font-size: 17px; flex: none; }
+    .lecture-row .name { flex: 1; min-width: 160px; font-size: 15px; font-weight: 600; }
   </style>
 </head>
 <body>
   <div id="nav-root"></div>
 
-  <main class="container" style="padding: 32px 20px 100px">
+  <main class="container" style="padding: 32px 24px 100px">
     <a href="dashboard.html" class="text-muted">← رجوع للوحة التحكم</a>
 
-    <div class="flex justify-between items-center gap-12" style="margin: 16px 0 24px; flex-wrap:wrap">
+    <div class="flex justify-between items-center gap-12" style="margin: 12px 0 28px; flex-wrap:wrap">
       <div>
-        <h1 id="course-name" style="margin-bottom:4px">...</h1>
+        <h1 id="course-name" style="font-size:34px; margin-bottom:6px">...</h1>
         <p class="text-muted" id="professor-name"></p>
       </div>
       <a id="upload-btn" href="#" class="btn btn-primary">+ رفع محاضرة</a>
     </div>
 
-    <div class="card" id="fingerprint-card" style="margin-bottom:24px" hidden>
-      <h3>🖋️ بصمة الأستاذ</h3>
-      <p class="text-muted" style="margin-bottom:10px">عبارات يكررها الأستاذ كثيرًا — نعطيها وزن أعلى بالملخصات القادمة.</p>
-      <div id="phrases"></div>
-    </div>
-
-    <div class="card" id="compare-card" style="margin-bottom:24px" hidden>
-      <h3>🔍 قارن بين محاضرتين</h3>
-      <p class="text-muted" style="margin-bottom:12px">نستخرج التكرار والتناقض بينهما.</p>
-      <div class="grid grid-2">
-        <select class="field" id="compare-a"></select>
-        <select class="field" id="compare-b"></select>
+    <div class="grid grid-2" style="margin-bottom:28px">
+      <div class="card" id="fingerprint-card" hidden>
+        <h3 style="font-size:21px">🖋️ بصمة الأستاذ</h3>
+        <p class="text-muted" style="margin-bottom:14px; font-size:14px">العبارات التي يكرّرها — غالبًا هي مفاتيح الاختبار.</p>
+        <div id="phrases"></div>
       </div>
-      <button class="btn btn-outline btn-block" id="compare-btn" style="margin-top:8px">قارن</button>
-      <div id="compare-result" style="margin-top:16px"></div>
+
+      <div class="card" id="compare-card" hidden>
+        <h3 style="font-size:21px">🔍 قارن بين محاضرتين</h3>
+        <p class="text-muted" style="margin-bottom:14px; font-size:14px">نستخرج التكرار والتناقض بينهما.</p>
+        <div class="grid grid-2">
+          <select class="field" id="compare-a"></select>
+          <select class="field" id="compare-b"></select>
+        </div>
+        <button class="btn btn-outline btn-block" id="compare-btn">قارن</button>
+        <div id="compare-result" style="margin-top:16px"></div>
+      </div>
     </div>
 
-    <h2>المحاضرات</h2>
-    <div id="lectures-list" class="grid grid-2"></div>
+    <h2 style="font-size:25px">المحاضرات</h2>
+    <div id="lectures-list" class="grid" style="gap:10px"></div>
     <div id="empty-state" class="empty-state" hidden>
-      <p style="font-size:40px">🎙️</p>
+      <p style="font-size:44px">🎙️</p>
       <p>ما رفعت أي محاضرة بهذا المقرر بعد.</p>
     </div>
   </main>
@@ -101,7 +114,7 @@
           document.getElementById('fingerprint-card').hidden = false;
           document.getElementById('phrases').innerHTML = phrases
             .slice(0, 15)
-            .map((p) => `<span class="phrase-chip">${escapeHtml(p.phrase)} × ${p.count}</span>`)
+            .map((p) => `<span class="phrase-chip">${escapeHtml(p.phrase)}<span class="n">${p.count}</span></span>`)
             .join('');
         }
 
@@ -116,16 +129,18 @@
         }
         empty.hidden = true;
 
+        const kindIcon = { audio: '🎙️', video: '🎬', pdf: '📄', image: '🖼️' };
         list.innerHTML = lectures
           .map((l) => {
             const href = l.processingStatus === 'done' ? `summary.html?id=${l.id}` : `upload.html?lectureId=${l.id}`;
             return `
-            <a class="card card-link" href="${href}">
-              <div class="flex justify-between items-center">
-                <strong>${escapeHtml(l.originalFileName || 'محاضرة')}</strong>
-                <span class="status-tag ${statusClass(l.processingStatus)}">${STATUS_LABEL[l.processingStatus] || l.processingStatus}</span>
+            <a class="card card-link" href="${href}" style="padding:0">
+              <div class="lecture-row">
+                <div class="icon">${kindIcon[l.sourceType] || '📄'}</div>
+                <div class="name">${escapeHtml(l.originalFileName || 'محاضرة')}</div>
+                <span class="status-tag ${statusClass(l.processingStatus)}"><span class="dot"></span>${STATUS_LABEL[l.processingStatus] || l.processingStatus}</span>
               </div>
-              ${l.processingStatus === 'error' ? `<p class="text-muted" style="color:var(--danger); margin-top:8px">${escapeHtml(l.errorMessage || '')}</p>` : ''}
+              ${l.processingStatus === 'error' ? `<p class="text-muted" style="color:var(--danger); margin:0 20px 14px">${escapeHtml(l.errorMessage || '')}</p>` : ''}
             </a>`;
           })
           .join('');

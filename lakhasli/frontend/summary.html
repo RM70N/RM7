@@ -8,39 +8,24 @@
   <style>
     .legend {
       display: flex;
-      gap: 16px;
+      gap: 18px;
       flex-wrap: wrap;
-      margin-bottom: 20px;
-      font-size: 13px;
+      margin: 18px 0;
+      padding: 16px 20px;
+      background: var(--surface-2);
+      border: 1px solid var(--line-2);
+      border-radius: var(--radius);
+      font-size: 13.5px;
+      color: var(--ink-2);
     }
-    .legend span {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .legend .dot { width: 10px; height: 10px; border-radius: 50%; }
-    .tabs {
-      display: flex;
-      gap: 8px;
-      margin: 24px 0;
-      flex-wrap: wrap;
-    }
-    .tabs a {
-      padding: 10px 18px;
-      border-radius: 999px;
-      border: 1.5px solid var(--border);
-      font-weight: 500;
-    }
-    .tabs a.active {
-      background: var(--primary);
-      color: #fff;
-      border-color: var(--primary);
-    }
+    .legend span { display: inline-flex; align-items: center; gap: 9px; }
+    .legend .dot { width: 16px; height: 16px; border-radius: 6px; }
     #context-modal {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,.45);
+      background: rgba(29,28,25,.44);
+      backdrop-filter: blur(6px);
       z-index: 70;
       align-items: center;
       justify-content: center;
@@ -50,41 +35,45 @@
       max-width: 560px;
       max-height: 70vh;
       overflow-y: auto;
+      border-radius: var(--radius-lg);
+      animation: scaleIn .3s var(--e) both;
     }
   </style>
 </head>
 <body>
   <div id="nav-root"></div>
 
-  <main class="container" style="max-width: 720px; padding: 32px 20px 100px">
+  <main class="container" style="max-width: 760px; padding: 32px 24px 100px">
     <a href="#" id="back-link" class="text-muted">← رجوع للمقرر</a>
-    <h1 id="lecture-title" style="margin: 16px 0 8px">الملخص</h1>
+    <div class="flex justify-between items-center gap-12" style="flex-wrap:wrap; margin-top:10px">
+      <h1 id="lecture-title" style="font-size:32px; margin:0">الملخص</h1>
+      <button class="btn btn-outline" id="read-aloud-btn" hidden>🔊 اقرأ الملخص</button>
+    </div>
 
-    <div class="tabs">
+    <div class="pill-tabs" style="margin-top:20px">
       <a href="#" class="active">📝 الملخص</a>
       <a id="tab-mindmap" href="#">🧠 الخريطة الذهنية</a>
       <a id="tab-quiz" href="#">⚡ اختبار سريع</a>
       <a id="tab-flashcards" href="#">🗂️ بطاقات المراجعة</a>
+      <a id="tab-explain" href="#">🗣️ اشرح لصديق</a>
       <a id="tab-race" href="#">🏁 غرفة سباق</a>
     </div>
 
     <div class="legend">
-      <span><span class="dot" style="background:var(--quoted)"></span> مقتبس حرفيًا</span>
-      <span><span class="dot" style="background:var(--inferred)"></span> استنتاج — تحقق منه</span>
-      <span><span class="dot" style="background:var(--gap)"></span> فجوة محتملة</span>
+      <span><span class="dot" style="background:var(--quoted-bg);box-shadow:inset 0 0 0 1.5px var(--quoted)"></span> مقتبس حرفيًا</span>
+      <span><span class="dot" style="background:var(--inferred-bg);box-shadow:inset 0 0 0 1.5px var(--inferred)"></span> استنتاج — تحقق منه</span>
+      <span><span class="dot" style="background:var(--gap-bg);box-shadow:inset 0 0 0 1.5px var(--gap)"></span> فجوة محتملة</span>
     </div>
 
-    <button class="btn btn-outline" id="read-aloud-btn" style="margin-bottom:16px" hidden>🔊 اقرأ الملخص</button>
-
-    <div class="card" id="summary-card">
-      <p id="summary-text" style="font-size:17px"></p>
+    <div class="card" id="summary-card" style="border-radius:var(--radius-lg); padding:30px; box-shadow:var(--sh-2)">
+      <p id="summary-text" style="font-size:17px; line-height:2.3; margin:0"></p>
     </div>
   </main>
 
   <div id="context-modal">
     <div class="card">
       <div class="flex justify-between items-center" style="margin-bottom:10px">
-        <h3>النص الأصلي الكامل</h3>
+        <h3 style="font-size:22px">النص الأصلي الكامل</h3>
         <button class="btn btn-ghost" id="close-modal">✕</button>
       </div>
       <p id="modal-transcript" style="white-space: pre-wrap; font-size:14px; color:var(--text-muted)"></p>

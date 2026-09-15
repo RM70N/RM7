@@ -8,95 +8,135 @@
   <style>
     .auth-wrap {
       min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
+      display: grid;
+      place-items: center;
+      padding: 40px 20px;
+      animation: fadeIn .4s ease both;
     }
-    .auth-card {
+    .auth-card-wrap {
       width: 100%;
-      max-width: 380px;
+      max-width: 420px;
+      animation: scaleIn .5s var(--e) both;
     }
     .auth-logo {
       text-align: center;
-      font-size: 26px;
-      font-weight: 900;
-      color: var(--primary);
-      margin-bottom: 24px;
+      margin-bottom: 26px;
     }
-    .auth-toggle {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 20px;
-    }
-    .auth-toggle button {
-      flex: 1;
-      padding: 10px;
-      border-radius: var(--radius-sm);
-      border: 1.5px solid var(--border);
-      background: var(--surface);
-      color: var(--text-muted);
-      font-family: inherit;
+    .auth-logo .name {
+      font-family: 'Amiri', serif;
+      font-size: 30px;
       font-weight: 700;
       cursor: pointer;
+    }
+    .auth-logo p {
+      margin: 8px 0 0;
+      color: var(--ink-2);
+      font-size: 14.5px;
+    }
+    .auth-card {
+      border-radius: var(--radius-lg);
+      padding: 26px;
+      box-shadow: var(--sh-3);
+    }
+    .auth-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      background: var(--surface-2);
+      border: 1px solid var(--line-2);
+      border-radius: 999px;
+      padding: 4px;
+      margin-bottom: 22px;
+    }
+    .auth-toggle button {
+      border: none;
+      border-radius: 999px;
+      padding: 11px;
+      font-size: 14.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .25s var(--e);
+      background: transparent;
+      color: var(--ink-2);
+      font-family: inherit;
     }
     .auth-toggle button.active {
       background: var(--primary);
       color: #fff;
-      border-color: var(--primary);
+      box-shadow: var(--sh-1);
     }
     .divider {
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin: 16px 0;
-      color: var(--text-muted);
+      gap: 12px;
+      margin: 20px 0;
+      color: var(--ink-3);
       font-size: 13px;
     }
     .divider::before, .divider::after {
       content: '';
       flex: 1;
       height: 1px;
-      background: var(--border);
+      background: var(--line);
+    }
+    .back-link {
+      text-align: center;
+      margin: 20px 0 0;
+      font-size: 13.5px;
+      color: var(--ink-3);
+      cursor: pointer;
     }
     #form-error {
       color: var(--danger);
-      font-size: 14px;
-      margin-bottom: 12px;
+      background: var(--gap-bg);
+      border: 1px solid #E9DBD5;
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-size: 13.5px;
+      margin-bottom: 14px;
       display: none;
+      animation: nudge .35s var(--e) both;
     }
   </style>
 </head>
 <body>
   <div class="auth-wrap">
-    <div class="card auth-card">
-      <div class="auth-logo">لخّصلي 📚</div>
-
-      <div class="auth-toggle">
-        <button type="button" id="tab-login" class="active">تسجيل الدخول</button>
-        <button type="button" id="tab-signup">حساب جديد</button>
+    <div class="auth-card-wrap">
+      <div class="auth-logo">
+        <div class="name" onclick="location.href='index.html'">لخّصلي <span style="font-size:22px">📚</span></div>
+        <p>محاضراتك، مرتبة ومفهومة.</p>
       </div>
 
-      <div id="form-error"></div>
+      <div class="card auth-card">
+        <div class="auth-toggle">
+          <button type="button" id="tab-login" class="active">تسجيل الدخول</button>
+          <button type="button" id="tab-signup">حساب جديد</button>
+        </div>
 
-      <form id="auth-form">
-        <div class="field" id="name-field" hidden>
-          <label>الاسم</label>
-          <input type="text" id="name" autocomplete="name" />
-        </div>
-        <div class="field">
-          <label>البريد الإلكتروني</label>
-          <input type="email" id="email" required autocomplete="email" />
-        </div>
-        <div class="field">
-          <label>كلمة المرور</label>
-          <input type="password" id="password" required autocomplete="current-password" minlength="6" />
-        </div>
-        <button type="submit" class="btn btn-primary btn-block" id="submit-btn">تسجيل الدخول</button>
-      </form>
+        <div id="form-error"></div>
 
-      <div class="divider">أو</div>
-      <button type="button" class="btn btn-outline btn-block" id="google-btn">تسجيل الدخول عبر جوجل</button>
+        <form id="auth-form">
+          <div class="field" id="name-field" hidden>
+            <label>الاسم</label>
+            <input type="text" id="name" autocomplete="name" />
+          </div>
+          <div class="field">
+            <label>البريد الإلكتروني</label>
+            <input type="email" id="email" required autocomplete="email" style="direction:ltr; text-align:right" />
+          </div>
+          <div class="field">
+            <label>كلمة المرور</label>
+            <input type="password" id="password" required autocomplete="current-password" minlength="6" style="direction:ltr; text-align:right" />
+          </div>
+          <button type="submit" class="btn btn-primary btn-block" id="submit-btn">تسجيل الدخول</button>
+        </form>
+
+        <div class="divider">أو</div>
+        <button type="button" class="btn btn-outline btn-block" id="google-btn">
+          <span style="font-family:'Amiri',serif;font-weight:700;color:var(--primary)">G</span> تسجيل الدخول عبر جوجل
+        </button>
+      </div>
+      <p class="back-link" onclick="location.href='index.html'">→ رجوع للصفحة الرئيسية</p>
     </div>
   </div>
 
