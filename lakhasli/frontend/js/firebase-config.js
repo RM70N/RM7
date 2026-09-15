@@ -25,5 +25,5 @@ export const auth = getAuth(firebaseApp);
 export const db = getFirestore(firebaseApp);
 export const rtdb = getDatabase(firebaseApp);
 
-// عنوان سيرفر الباك إند (Railway بالإنتاج، لوكال هوست أثناء التطوير)
-export const API_BASE_URL = window.LAKHASLI_API_URL || 'http://localhost:4100';
+// عنوان سيرفر الباك إند (Render بالإنتاج، لوكال هوست أثناء التطوير)
+export const API_BASE_URL = window.LAKHASLI_API_URL || 'https://lakhasli-backend.onrender.com';

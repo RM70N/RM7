@@ -11,7 +11,7 @@
 بناءً على طلب صريح، **لا يُستخدم Firebase Storage نهائيًا**. الملفات المرفوعة
 (صوت/فيديو/PDF/صورة) **لا تُخزَّن بشكل دائم على الإطلاق**:
 
-1. الطالب يرفع الملف مباشرة لسيرفر الباك إند (Express على Railway) عبر `multipart/form-data`.
+1. الطالب يرفع الملف مباشرة لسيرفر الباك إند (Express على Render) عبر `multipart/form-data`.
 2. يُحفظ مؤقتًا على قرص السيرفر (`/tmp`) أثناء المعالجة فقط.
 3. يُعالَج فورًا: تفريغ صوتي (Groq Whisper) أو استخراج نص (PDF/صورة عبر Gemini Vision).
 4. يُحذف الملف المؤقت فورًا بعد انتهاء المعالجة (نجحت أو فشلت — `finally` block).
@@ -38,7 +38,7 @@
 
 ```
 lakhasli/
-├─ backend/                  سيرفر Node.js + Express (Railway)
+├─ backend/                  سيرفر Node.js + Express (Render)
 │  └─ src/
 │     ├─ config/             Firebase Admin + متغيرات البيئة
 │     ├─ middleware/         مصادقة، رفع ملفات، معالجة أخطاء
@@ -101,8 +101,8 @@ pip install edge-tts
 ```
 هذا الجزء **اختياري تمامًا** — بقية المنصة تشتغل بدونه، وبدون تثبيته فقط زر "استمع
 لملخصك الصوتي" برجّع خطأ عربي واضح بدل ما يعطّل أي شيء ثاني. لو نشرت الباك إند على
-Railway، خلي عندك Dockerfile أو `nixpacks.toml` يثبّت Python 3 + `pip install edge-tts`
-جنب بيئة Node الافتراضية (Railway ما يجيب Python تلقائيًا لمشروع Node).
+Render، خلي عندك Dockerfile أو `nixpacks.toml` يثبّت Python 3 + `pip install edge-tts`
+جنب بيئة Node الافتراضية (Render ما يجيب Python تلقائيًا لمشروع Node).
 
 ### 2. الواجهة
 
@@ -114,16 +114,20 @@ npx serve .
 # أو: python3 -m http.server 5500
 ```
 
-إذا كان عنوان الباك إند غير `http://localhost:4100`، حط قبل تحميل أي سكربت بصفحاتك:
+إذا كان عنوان الباك إند غير الافتراضي، حط قبل تحميل أي سكربت بصفحاتك:
 ```html
-<script>window.LAKHASLI_API_URL = 'https://your-backend.up.railway.app';</script>
+<script>window.LAKHASLI_API_URL = 'https://your-backend.onrender.com';</script>
 ```
 (أو عدّل `API_BASE_URL` مباشرة بـ`js/firebase-config.js`.)
+
+**الباك إند الحالي منشور فعليًا على:** `https://lakhasli-backend.onrender.com`
+(هذا العنوان الافتراضي المضبوط الآن بـ`firebase-config.js` — عدّله إذا غيّرت اسم
+الخدمة بـRender).
 
 ### 3. النشر
 
 - **الواجهة (Netlify):** اسحب مجلد `frontend/` كموقع ثابت، أو اربطه بـGit.
-- **الباك إند (Railway):** انشر مجلد `backend/`، وتأكد إن ffmpeg متوفر (حزمة
+- **الباك إند (Render):** انشر مجلد `backend/`، وتأكد إن ffmpeg متوفر (حزمة
   `ffmpeg-static` تنزّل ثنائي ffmpeg تلقائيًا أثناء `npm install`، ما يحتاج تثبيت نظام).
 - بعد النشر، حدّث `FRONTEND_URL` بإعدادات الباك إند (لـCORS)، وحدّث عنوان الباك إند
   بالواجهة.
@@ -172,7 +176,7 @@ npx serve .
   السحابية) — تحقّقت من صيغة أوامره (`--text`, `--voice`, `--write-media -`) من الكود
   المصدري الفعلي للحزمة، لكن بيئة التطوير اللي بنيت فيها هذا المشروع تمنع الوصول لخدمة
   Microsoft الصوتية شبكيًا، فما قدرت أختبر توليد صوت فعلي من طرف لطرف — يفترض يشتغل
-  عادي على Railway (بدون هذا الحظر)، لكن جرّبه بعد النشر للتأكد.
+  عادي على Render (بدون هذا الحظر)، لكن جرّبه بعد النشر للتأكد.
 
 ## التحقق الذي تم فعليًا (وليس افتراضًا)
 
