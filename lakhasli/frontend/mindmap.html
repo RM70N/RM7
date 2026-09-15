@@ -53,6 +53,11 @@
     <p class="text-muted" style="margin-bottom:4px">اضغط «وضّح أكثر» أو «مثال» على أي عقدة — تتفرّع الخريطة أمامك دون إعادة رسمها.</p>
     <p class="text-muted" style="font-size:13px; margin-bottom:20px">ملاحظة: الشجرة تنمو من اليسار لليمين (سلوك مكتبة markmap الافتراضي، لا تدعم عكس الاتجاه للعربي) — نص كل عقدة نفسه يُعرض بشكل عربي طبيعي.</p>
 
+    <div id="loading-state" class="empty-state">
+      <div class="spinner" style="width:20px;height:20px;border-width:2.5px;margin:0 auto 10px"></div>
+      نجهز خريطتك الذهنية... قد يأخذ هذا شوي أول مرة
+    </div>
+    <div id="error-state" class="empty-state" hidden></div>
     <div id="empty-state" class="empty-state" hidden>ما فيه خريطة ذهنية متاحة لهذه المحاضرة.</div>
     <svg id="mindmap-svg" hidden></svg>
   </main>
@@ -79,18 +84,41 @@
     let treeData = null;
     let mm = null;
 
+    function showError(message) {
+      document.getElementById('loading-state').hidden = true;
+      const errEl = document.getElementById('error-state');
+      errEl.hidden = false;
+      errEl.innerHTML = '';
+      const p = document.createElement('p');
+      p.style.margin = '0 0 14px';
+      p.textContent = message;
+      const retryBtn = document.createElement('button');
+      retryBtn.className = 'btn btn-outline';
+      retryBtn.textContent = '🔁 حاول مرة ثانية';
+      retryBtn.addEventListener('click', () => window.location.reload());
+      errEl.append(p, retryBtn);
+      showToast(message, 'error');
+    }
+
     try {
       const lecture = await api.get(`/api/lectures/${lectureId}`);
+
       if (!lecture.mindMapJson) {
+        document.getElementById('loading-state').hidden = true;
         document.getElementById('empty-state').hidden = false;
+      } else if (!window.markmap || !window.d3) {
+        // مكتبات markmap/d3 ما وصلت من الـCDN (اتصال ضعيف أو حجب) — نعرض رسالة
+        // واضحة بدل صفحة فاضية بدون أي تفسير.
+        showError('تعذّر تحميل مكتبة الخريطة الذهنية. تحقق من اتصالك بالإنترنت وحاول تحديث الصفحة.');
       } else {
         treeData = lecture.mindMapJson;
         const svg = document.getElementById('mindmap-svg');
+        document.getElementById('loading-state').hidden = true;
         svg.hidden = false;
         mm = renderMindmap(svg, treeData);
       }
     } catch (err) {
-      showToast(err.message, 'error');
+      showError(err.message);
     }
 
     // تفويض النقر (event delegation): يشتغل مع أي عقد تُضاف لاحقًا بعد التوسيع
