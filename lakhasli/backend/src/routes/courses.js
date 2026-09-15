@@ -55,12 +55,13 @@ coursesRouter.get(
     if (!courseSnap.exists || courseSnap.data().userId !== req.userId) {
       throw new AppError(404, 'المقرر غير موجود.');
     }
-    const snap = await firestore
-      .collection('lectures')
-      .where('courseId', '==', req.params.id)
-      .orderBy('createdAt', 'desc')
-      .get();
-    res.json(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    // فرز بالذاكرة بدل orderBy على Firestore عمدًا — where + orderBy على حقلين مختلفين
+    // يحتاج composite index يدوي التفعيل بكونسول Firestore، وعدد محاضرات المقرر الواحد
+    // صغير أصلًا فالفرز بالذاكرة أبسط وما يحتاج أي إعداد إضافي.
+    const snap = await firestore.collection('lectures').where('courseId', '==', req.params.id).get();
+    const lectures = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    lectures.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+    res.json(lectures);
   })
 );
 

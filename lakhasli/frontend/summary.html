@@ -84,7 +84,7 @@
     import { requireUser } from './js/auth.js';
     import { renderNav } from './js/nav.js';
     import { api } from './js/api.js';
-    import { showToast, escapeHtml } from './js/ui.js';
+    import { showToast, escapeHtml, speakText } from './js/ui.js';
 
     const user = await requireUser();
     renderNav(user, '');
@@ -142,12 +142,15 @@
             readBtn.textContent = '🔊 اقرأ الملخص';
             return;
           }
-          const utterance = new SpeechSynthesisUtterance(plainSummary);
-          utterance.lang = 'ar-SA';
-          utterance.onend = () => (readBtn.textContent = '🔊 اقرأ الملخص');
-          utterance.onerror = () => (readBtn.textContent = '🔊 اقرأ الملخص');
-          speechSynthesis.speak(utterance);
-          readBtn.textContent = '⏹️ إيقاف القراءة';
+          readBtn.textContent = '⏳ لحظات...';
+          speakText(plainSummary, {
+            onStart: () => (readBtn.textContent = '⏹️ إيقاف القراءة'),
+            onEnd: () => (readBtn.textContent = '🔊 اقرأ الملخص'),
+            onError: (message) => {
+              readBtn.textContent = '🔊 اقرأ الملخص';
+              showToast(message, 'error');
+            },
+          });
         });
       }
 

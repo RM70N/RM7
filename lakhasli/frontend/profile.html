@@ -144,7 +144,7 @@
     import { requireUser } from './js/auth.js';
     import { renderNav } from './js/nav.js';
     import { api } from './js/api.js';
-    import { showToast } from './js/ui.js';
+    import { showToast, speakText } from './js/ui.js';
     import { THEMES, FLASHCARD_STYLES } from './js/gamification.js';
 
     const user = await requireUser();
@@ -234,20 +234,26 @@
         const blob = await api.getBlob('/api/users/me/weekly-summary/audio');
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
-        audio.addEventListener('ended', () => URL.revokeObjectURL(url));
+        audio.addEventListener('ended', () => {
+          URL.revokeObjectURL(url);
+          btn.disabled = false;
+          btn.textContent = original;
+        });
+        audio.addEventListener('error', () => URL.revokeObjectURL(url));
         await audio.play();
       } catch {
-        if ('speechSynthesis' in window) {
-          speechSynthesis.cancel();
-          const utterance = new SpeechSynthesisUtterance(weeklySummaryText);
-          utterance.lang = 'ar-SA';
-          speechSynthesis.speak(utterance);
-        } else {
-          showToast('القراءة الصوتية غير مدعومة بهذا المتصفح.', 'error');
-        }
-      } finally {
-        btn.disabled = false;
-        btn.textContent = original;
+        speakText(weeklySummaryText, {
+          onStart: () => (btn.textContent = '🔊 جارٍ القراءة...'),
+          onEnd: () => {
+            btn.disabled = false;
+            btn.textContent = original;
+          },
+          onError: (message) => {
+            btn.disabled = false;
+            btn.textContent = original;
+            showToast(message, 'error');
+          },
+        });
       }
     });
   </script>
