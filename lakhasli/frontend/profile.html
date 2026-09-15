@@ -210,28 +210,41 @@
       showToast(err.message, 'error');
     }
 
+    let weeklySummaryText = 'ما سجّلت أي جلسة مراجعة هالأسبوع. يلا نبدأ من اليوم!';
     try {
       const summary = await api.get('/api/users/me/weekly-summary');
       document.getElementById('pride-sessions').textContent = summary.sessionsCount;
       document.getElementById('pride-detail').textContent = `راجعت ${summary.lecturesStudied} محاضرة، وقضيت ${summary.totalTimeMinutes} دقيقة بالمذاكرة 👏`;
+      if (summary.sessionsCount) {
+        weeklySummaryText = `هذا الأسبوع سويت ${summary.sessionsCount} جلسة مراجعة، وراجعت ${summary.lecturesStudied} محاضرة، وقضيت ${summary.totalTimeMinutes} دقيقة بالمذاكرة. استمر على هالمستوى!`;
+      }
     } catch {
       /* تجاهل */
     }
 
-    // المقطع الصوتي يُولَّد عند الطلب فقط (edge-tts على السيرفر) — بدون أي تخزين دائم.
+    // نجرب أول مقطع صوتي عالي الجودة من السيرفر (edge-tts، best-effort وقد يكون
+    // غير مفعّل حسب إعدادات الاستضافة)، ولو فشل نرجع فورًا لقراءة المتصفح المدمجة
+    // (Web Speech API) عشان الزر يشتغل دائمًا بدل ما يطلع خطأ للطالب.
     document.getElementById('pride-listen').addEventListener('click', async (e) => {
       const btn = e.currentTarget;
       const original = btn.textContent;
       btn.disabled = true;
-      btn.textContent = '⏳ جارٍ التوليد...';
+      btn.textContent = '⏳ جارٍ التحضير...';
       try {
         const blob = await api.getBlob('/api/users/me/weekly-summary/audio');
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
-        audio.play();
         audio.addEventListener('ended', () => URL.revokeObjectURL(url));
-      } catch (err) {
-        showToast(err.message, 'error');
+        await audio.play();
+      } catch {
+        if ('speechSynthesis' in window) {
+          speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(weeklySummaryText);
+          utterance.lang = 'ar-SA';
+          speechSynthesis.speak(utterance);
+        } else {
+          showToast('القراءة الصوتية غير مدعومة بهذا المتصفح.', 'error');
+        }
       } finally {
         btn.disabled = false;
         btn.textContent = original;
