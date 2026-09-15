@@ -11,8 +11,9 @@
       height: 70vh;
       min-height: 420px;
       background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--sh-2);
     }
     /* عناصر محتوى العقد بالخريطة (markmap-foreign) عبارة عن HTML حقيقي داخل SVG
        (foreignObject)، لذلك تقدر تحتوي أزرار تفاعلية حقيقية — نص العقدة يبقى LTR
@@ -48,9 +49,9 @@
 
   <main class="container" style="max-width: 900px; padding: 32px 20px 100px">
     <a href="#" id="back-link" class="text-muted">← رجوع للملخص</a>
-    <h1 style="margin: 16px 0">🧠 الخريطة الذهنية</h1>
-    <p class="text-muted">اضغط "وضّح أكثر" أو "مثال" بجانب أي فرع لتوسيعه فورًا بمساعدة الذكاء الاصطناعي (Gemini) دون إعادة تحميل الصفحة.</p>
-    <p class="text-muted" style="font-size:13px">ملاحظة: الشجرة تنمو من اليسار لليمين (سلوك مكتبة markmap الافتراضي، لا تدعم عكس الاتجاه للعربي) — نص كل عقدة نفسه يُعرض بشكل عربي طبيعي.</p>
+    <h1 style="font-size:32px; margin: 12px 0 6px">🧠 الخريطة الذهنية</h1>
+    <p class="text-muted" style="margin-bottom:4px">اضغط «وضّح أكثر» أو «مثال» على أي عقدة — تتفرّع الخريطة أمامك دون إعادة رسمها.</p>
+    <p class="text-muted" style="font-size:13px; margin-bottom:20px">ملاحظة: الشجرة تنمو من اليسار لليمين (سلوك مكتبة markmap الافتراضي، لا تدعم عكس الاتجاه للعربي) — نص كل عقدة نفسه يُعرض بشكل عربي طبيعي.</p>
 
     <div id="empty-state" class="empty-state" hidden>ما فيه خريطة ذهنية متاحة لهذه المحاضرة.</div>
     <svg id="mindmap-svg" hidden></svg>

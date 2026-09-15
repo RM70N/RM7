@@ -7,67 +7,79 @@
   <link rel="stylesheet" href="css/style.css" />
   <style>
     .room-code {
-      font-size: 34px;
-      font-weight: 900;
-      letter-spacing: 6px;
+      font-family: 'Amiri', serif;
+      font-size: 56px;
+      font-weight: 700;
+      letter-spacing: .14em;
       text-align: center;
-      color: var(--primary);
-      margin: 16px 0;
+      color: var(--primary-700);
+      margin: 10px 0 0;
+      line-height: 1.2;
     }
     .leaderboard-row {
       display: flex;
-      justify-content: space-between;
-      padding: 10px 14px;
-      border-radius: var(--radius-sm);
-      background: var(--surface-alt);
-      margin-bottom: 8px;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 16px;
+      background: var(--surface-2);
+      border: 1px solid var(--line-2);
+      margin-bottom: 9px;
       font-weight: 500;
     }
     .leaderboard-row.me {
-      background: var(--primary-light);
-      color: var(--primary-dark);
+      background: var(--primary-50);
+      border-color: var(--primary-100);
+      color: var(--primary-700);
       font-weight: 700;
     }
     .leaderboard-row .rank {
-      color: var(--text-muted);
-      margin-inline-end: 8px;
+      font-family: 'Amiri', serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--ink-3);
+      width: 20px;
+      text-align: center;
     }
+    .leaderboard-row .name { flex: 1; }
+    .leaderboard-row .pts { font-weight: 700; color: var(--primary-700); font-variant-numeric: tabular-nums; }
   </style>
 </head>
 <body>
   <div id="nav-root"></div>
 
-  <main class="container" style="max-width: 480px; padding: 32px 20px 100px">
-    <h1 style="text-align:center">🏁 غرفة السباق</h1>
+  <main class="container" style="max-width: 520px; padding: 32px 24px 100px">
+    <h1 style="text-align:center; font-size:34px">🏁 غرفة السباق</h1>
 
     <!-- شاشة البداية: إنشاء أو انضمام -->
-    <div id="entry-view" class="card" hidden>
-      <div class="field">
+    <div id="entry-view" class="card" style="border-radius:var(--radius-lg); padding:34px 24px; text-align:center; box-shadow:var(--sh-2); margin-top:16px" hidden>
+      <div class="field" style="text-align:center">
         <label>عندك رمز غرفة؟ اكتبه هنا للانضمام</label>
-        <input type="text" id="join-code" maxlength="5" placeholder="ABCDE" style="text-transform:uppercase" />
+        <input type="text" id="join-code" maxlength="5" placeholder="ABCDE" style="text-transform:uppercase; text-align:center; letter-spacing:.2em; font-family:'Amiri',serif; font-size:22px" />
       </div>
       <button class="btn btn-primary btn-block" id="join-btn">انضم للسباق</button>
     </div>
 
     <!-- غرفة الانتظار -->
-    <div id="waiting-view" style="display:none">
-      <div class="card">
-        <p class="text-muted" style="text-align:center">شارك هذا الرمز مع أصدقائك</p>
+    <div id="waiting-view" style="display:none; margin-top:16px">
+      <div class="card" style="border-radius:var(--radius-lg); padding:30px; box-shadow:var(--sh-2)">
+        <p class="text-muted" style="text-align:center; font-size:13px">رمز الغرفة — شاركه مع زملائك</p>
         <div class="room-code" id="room-code"></div>
       </div>
-      <h3 style="margin-top:24px">المشاركون</h3>
+      <h3 style="margin-top:22px; font-size:21px">المشاركون</h3>
       <div id="participants-list"></div>
-      <button class="btn btn-accent btn-block" id="start-btn" style="margin-top:20px; display:none">ابدأ السباق!</button>
+      <button class="btn btn-primary btn-block" id="start-btn" style="margin-top:20px; display:none">ابدأ السباق!</button>
       <p class="text-muted" id="waiting-note" style="text-align:center; margin-top:12px">بانتظار المضيف يبدأ السباق...</p>
     </div>
 
     <!-- السباق النشط -->
-    <div id="race-view" style="display:none">
-      <div class="card">
-        <h3 id="race-q-text" style="margin-bottom:16px"></h3>
+    <div id="race-view" style="display:none; margin-top:16px">
+      <div class="card" style="border-radius:var(--radius-lg); padding:26px; box-shadow:var(--sh-2)">
+        <p class="text-muted" style="font-size:13px; font-weight:600; margin:0 0 6px">سؤال حي</p>
+        <h3 id="race-q-text" style="font-size:22px; line-height:1.6; margin-bottom:18px"></h3>
         <div id="race-q-options"></div>
       </div>
-      <h3 style="margin-top:24px">🏆 الترتيب الحي</h3>
+      <h3 style="margin-top:24px; font-size:21px">🏆 الترتيب الحي</h3>
       <div id="leaderboard"></div>
     </div>
   </main>
@@ -163,7 +175,11 @@
     function renderParticipants(data) {
       const list = document.getElementById('participants-list');
       list.innerHTML = Object.keys(data)
-        .map((uid) => `<div class="badge" style="margin:4px">${uid === user.uid ? 'أنت' : 'مشارك'}</div>`)
+        .map(
+          (uid) => `<div class="leaderboard-row ${uid === user.uid ? 'me' : ''}"><span class="name">${
+            uid === user.uid ? 'أنت' : 'مشارك'
+          }</span><span style="color:var(--ok); font-size:12.5px; font-weight:600">جاهز</span></div>`
+        )
         .join('');
     }
 
@@ -174,9 +190,9 @@
       board.innerHTML = sorted
         .map(
           ([uid, p], i) =>
-            `<div class="leaderboard-row ${uid === user.uid ? 'me' : ''}"><span><span class="rank">#${i + 1}</span>${
+            `<div class="leaderboard-row ${uid === user.uid ? 'me' : ''}"><span class="rank">${i + 1}</span><span class="name">${
               uid === user.uid ? 'أنت' : 'مشارك'
-            }</span><span>${p.score || 0}</span></div>`
+            }</span><span class="pts">${p.score || 0}</span></div>`
         )
         .join('');
     }

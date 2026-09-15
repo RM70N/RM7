@@ -10,58 +10,62 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 24px;
+      gap: 12px;
     }
     .quiz-progress {
-      color: var(--text-muted);
-      font-weight: 700;
+      color: var(--ink-2);
+      font-weight: 600;
+      font-size: 13.5px;
     }
+    .quiz-timer-unit { font-family: 'Tajawal'; font-size: 12px; font-weight: 600; color: var(--ink-3); margin-inline-start: 4px; }
+    .timer-bar { height: 6px; border-radius: 999px; background: var(--line-2); margin-top: 10px; overflow: hidden; }
+    .timer-bar-fill { height: 100%; border-radius: 999px; background: var(--primary); transition: width 1s linear; }
     .streak-line {
       text-align: center;
-      margin-bottom: 12px;
-      font-weight: 700;
-      color: var(--accent);
-      min-height: 24px;
+      margin-top: 14px;
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--ink-2);
+      min-height: 20px;
     }
-    .result-emoji {
-      font-size: 60px;
-      text-align: center;
-      margin-bottom: 12px;
-    }
+    .quiz-panel { text-align: center; padding: 56px 28px; border-radius: var(--radius-lg); box-shadow: var(--sh-2); animation: scaleIn .45s var(--e) both; }
+    .quiz-panel .icon-box { width: 74px; height: 74px; margin: 0 auto; border-radius: 24px; background: var(--primary-50); border: 1px solid var(--primary-100); display: grid; place-items: center; font-size: 32px; animation: softPulse 2.6s ease-in-out infinite; }
+    .result-emoji { font-size: 52px; }
   </style>
 </head>
 <body>
   <div id="nav-root"></div>
 
-  <main class="container" style="max-width: 560px; padding: 32px 20px 100px">
+  <main class="container" style="max-width: 620px; padding: 32px 24px 100px">
     <a href="#" id="back-link" class="text-muted">← رجوع للملخص</a>
 
-    <div id="intro-view" style="text-align:center; padding: 60px 0">
-      <p style="font-size:50px">⚡</p>
-      <h1>معركة الأسئلة</h1>
-      <p class="text-muted">عندك 60 ثانية عشان تجاوب أكبر عدد من الأسئلة. جاهز؟</p>
-      <button class="btn btn-primary" id="start-btn" style="margin-top:20px">ابدأ!</button>
+    <div id="intro-view" class="card quiz-panel" style="margin-top:16px">
+      <div class="icon-box">⚡</div>
+      <h1 style="font-size:36px; margin:20px 0 8px">معركة الأسئلة</h1>
+      <p class="text-muted" style="max-width:36ch; margin:0 auto 24px; line-height:1.9">٦٠ ثانية، أسئلة من محاضرتك. كل إجابة صحيحة متتالية ترفع سلسلتك ونقاطك.</p>
+      <button class="btn btn-primary" id="start-btn" style="padding:15px 36px">ابدأ!</button>
     </div>
 
-    <div id="quiz-view" style="display:none">
+    <div id="quiz-view" style="display:none; margin-top:16px">
       <div class="quiz-header">
         <span class="quiz-progress" id="q-progress"></span>
-        <span class="quiz-timer" id="timer">60</span>
+        <span class="quiz-timer" id="timer">60<span class="quiz-timer-unit">ثانية</span></span>
       </div>
-      <div class="streak-line" id="streak-line"></div>
-      <div class="card">
-        <h3 id="q-text" style="margin-bottom:16px"></h3>
+      <div class="timer-bar"><div class="timer-bar-fill" id="timer-bar-fill" style="width:100%"></div></div>
+      <div class="card" style="margin-top:18px; border-radius:var(--radius-lg); padding:28px; box-shadow:var(--sh-2)">
+        <h3 id="q-text" style="font-size:23px; line-height:1.6; margin-bottom:20px"></h3>
         <div id="q-options"></div>
       </div>
+      <div class="streak-line" id="streak-line"></div>
     </div>
 
-    <div id="result-view" style="display:none; text-align:center; padding: 40px 0">
+    <div id="result-view" class="card quiz-panel" style="display:none; margin-top:16px">
       <div class="result-emoji" id="result-emoji"></div>
-      <h1 id="result-score"></h1>
-      <p class="text-muted" id="result-note"></p>
-      <div class="flex gap-12" style="margin-top:24px">
-        <button class="btn btn-outline btn-block" id="retry-quiz">حاول مرة ثانية</button>
-        <a href="#" class="btn btn-primary btn-block" id="back-summary">رجوع للملخص</a>
+      <h1 id="result-score" style="font-size:44px; margin:10px 0"></h1>
+      <p class="text-muted" id="result-note" style="max-width:36ch; margin:0 auto 22px; line-height:1.9"></p>
+      <div class="flex gap-12" style="justify-content:center; flex-wrap:wrap">
+        <button class="btn btn-primary" id="retry-quiz">حاول مرة ثانية</button>
+        <a href="#" class="btn btn-outline" id="back-summary">رجوع للملخص</a>
       </div>
     </div>
   </main>
@@ -123,7 +127,8 @@
 
       timerHandle = setInterval(() => {
         timeLeft -= 1;
-        document.getElementById('timer').textContent = timeLeft;
+        document.getElementById('timer').firstChild.textContent = timeLeft;
+        document.getElementById('timer-bar-fill').style.width = Math.max(0, (timeLeft / 60) * 100) + '%';
         if (timeLeft <= 0) endQuiz();
       }, 1000);
 

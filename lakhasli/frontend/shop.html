@@ -8,24 +8,27 @@
   <style>
     .shop-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
       gap: 16px;
     }
-    .shop-item {
-      text-align: center;
+    .shop-item .preview {
+      height: 104px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      font-size: 30px;
     }
-    .shop-item .emoji {
-      font-size: 40px;
-      margin-bottom: 8px;
-    }
+    .shop-item h3 { font-size: 17px; margin: 16px 0 4px; }
+    .shop-item p.note { margin: 0 0 16px; color: var(--ink-2); font-size: 13.5px; }
+    .shop-item .price { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--inferred); }
   </style>
 </head>
 <body>
   <div id="nav-root"></div>
 
-  <main class="container" style="padding: 32px 20px 100px">
-    <h1>🛍️ متجر التركيز</h1>
-    <p class="text-muted" style="margin-bottom:24px">افتح ثيمات وإطارات جديدة بنقاطك من المذاكرة اليومية.</p>
+  <main class="container" style="padding: 36px 24px 100px">
+    <h1 style="font-size:36px">🛍️ متجر التركيز</h1>
+    <p class="text-muted" style="margin:8px 0 28px">افتح ثيمات وإطارات جديدة بنقاطك من المذاكرة اليومية.</p>
 
     <div class="shop-grid" id="shop-grid"></div>
   </main>
@@ -45,17 +48,23 @@
     async function load() {
       profile = await api.get('/api/users/me');
       const grid = document.getElementById('shop-grid');
+      const previews = ['var(--primary-50)', 'var(--quoted-bg)', 'var(--inferred-bg)', 'var(--gap-bg)'];
       grid.innerHTML = THEMES.filter((t) => t.cost > 0)
-        .map((t) => {
+        .map((t, i) => {
           const owned = (profile.unlockedThemes || []).includes(t.id);
           return `
           <div class="card shop-item">
-            <div class="emoji">${t.preview}</div>
+            <div class="preview" style="background:${previews[i % previews.length]}">${t.preview}</div>
             <h3>${t.name}</h3>
-            <p class="badge" style="margin-bottom:10px">⭐ ${t.cost}</p>
-            <button class="btn ${owned ? 'btn-ghost' : 'btn-primary'} btn-block" data-id="${t.id}" ${owned ? 'disabled' : ''}>
-              ${owned ? 'تم الشراء ✓' : 'شراء'}
-            </button>
+            <p class="note">تخصيص بصري لواجهتك</p>
+            <div class="flex justify-between items-center">
+              <span class="price">⭐ ${t.cost}</span>
+              ${
+                owned
+                  ? '<span class="badge" style="background:var(--quoted-bg); border-color:var(--quoted); color:var(--quoted)">تم الشراء ✓</span>'
+                  : `<button class="btn btn-primary" data-id="${t.id}">شراء</button>`
+              }
+            </div>
           </div>`;
         })
         .join('');
